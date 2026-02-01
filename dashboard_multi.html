@@ -279,7 +279,7 @@
 </div>
 
 <script>
-    const BASE_URL = "https://profit-calendar-mt5.asia-southeast1.firebasedatabase.app";
+    const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
     const RATE_API = "https://api.exchangerate-api.com/v4/latest/USD";
     let allAccountIds = [], accountSettings = {}, accountsData = {}, manualData = {};
     let displayDate = new Date(), usdToJpyRate = 153.14, currentViewType = 'Real';
@@ -312,51 +312,50 @@
     
     function updateRateDisplay() { document.getElementById('currentRate').innerText = usdToJpyRate; }
 
-    async function fetchAllData() {
-        try {
-            const [usersRes, settingsRes, manualRes] = await Promise.all([
-                fetch(`${BASE_URL}/users.json`),
-                fetch(`${BASE_URL}/settings.json`),
-                fetch(`${BASE_URL}/manual_history.json`)
-            ]);
+async function fetchAllData() {
+    try {
+        // Workersからデータを取得
+        const res = await fetch(BASE_URL);
+        if (!res.ok) throw new Error("Workers connection failed");
+        
+        const rawData = await res.json();
+        
+        // 取得したデータを既存の変数 'accountsData' にマッピング
+        // ※Workersの構造に合わせてデータを整理します
+        accountsData = {};
+        allAccountIds = [];
 
-            const usersData = usersRes.ok ? (await usersRes.json() || {}) : {};
-            const settingsData = settingsRes.ok ? (await settingsRes.json() || {}) : {};
-            const rawManualData = manualRes.ok ? (await manualRes.json() || {}) : {};
-
-            accountsData = usersData;
-            accountSettings = settingsData;
-            
-            manualData = {};
-            Object.keys(rawManualData).forEach(safeKey => {
-                manualData[safeKey] = rawManualData[safeKey];
-            });
-
-            allAccountIds = Object.keys(usersData);
-            Object.keys(settingsData).forEach(id => {
-                if (settingsData[id].isManual && !allAccountIds.includes(id)) {
-                    allAccountIds.push(id);
-                    accountsData[id] = {
-                        platform: "Manual",
-                        account_type: settingsData[id].account_type || "Real", 
-                        isManual: true,
-                        currency: settingsData[id].currency || "JPY",
-                        balance: 0,
-                        equity: 0,
-                        history: []
-                    };
-                }
-            });
-
-            if(document.getElementById('accountSelector').options.length <= 1) {
-                 updateDropdown();
+        rawData.forEach(item => {
+            const id = item.account_id;
+            if (!accountsData[id]) {
+                accountsData[id] = {
+                    balance: 0,
+                    currency: "JPY", // デフォルト。必要ならWorkersから送る
+                    history: []
+                };
+                allAccountIds.push(id);
             }
-            updateUI();
-            document.getElementById('lastTime').innerText = new Date().toLocaleTimeString();
-        } catch (e) {
-            console.error("Data fetch error:", e);
-        }
+
+            // 9999年の残高データの場合
+            if (item.timestamp.startsWith("9999")) {
+                accountsData[id].balance = item.amount;
+            } else {
+                // 通常の履歴データ。カレンダーが読み取れるようにフォーマットを戻す
+                // Workers側のハイフン(-)をドット(.)に戻して既存ロジックと合わせる
+                accountsData[id].history.push({
+                    profit: item.amount,
+                    close_time: item.timestamp.replace(/-/g, '.') 
+                });
+            }
+        });
+
+        updateDropdown();
+        updateUI();
+        document.getElementById('lastTime').innerText = new Date().toLocaleTimeString();
+    } catch (e) {
+        console.error("Data fetch error:", e);
     }
+}
 
     function initPullToRefresh() {
         let touchStartY = 0;
@@ -928,4 +927,5 @@
     init();
 </script>
 </body>
+
 </html>
