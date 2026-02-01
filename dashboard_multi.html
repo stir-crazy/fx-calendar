@@ -251,7 +251,70 @@
         if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         updateUI();
     }
+// --- 【追加】設定画面を開く・閉じる・作る機能 ---
+    
+    function openSettings() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            updateDropdown(); // 開くときに最新の入力欄を作る
+        }
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    function updateDropdown() {
+        const container = document.getElementById('settings-container');
+        if (!container) return;
+
+        // 設定画面の中身をリセットして作り直す
+        container.innerHTML = '';
+        
+        if (allAccountIds.length === 0) {
+            container.innerHTML = '<p>データが読み込まれていません</p>';
+        } else {
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || { name: '', isHidden: false };
+                const div = document.createElement('div');
+                div.className = 'setting-item';
+                div.innerHTML = `
+                    <label>ID: ${id}</label>
+                    <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="表示名">
+                    <label style="display:block; margin-top:5px;">
+                        <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> 一覧から隠す
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ついでに画面上部のプルダウン（口座選択）も更新する
+        const select = document.getElementById('account-select');
+        if (select) {
+            const currentVal = select.value; // 今選んでいるものを覚えておく
+            select.innerHTML = '<option value="all">全口座合計</option>';
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || {};
+                if (!s.isHidden) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = s.name || id;
+                    select.appendChild(option);
+                }
+            });
+            // もし選んでいた口座がまだあれば、選択状態を戻す
+            if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+    }
 </script>
 </body>
 </html>
+
 
