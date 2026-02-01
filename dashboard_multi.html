@@ -901,7 +901,8 @@ async function fetchAllData() {
     }
 
 async function saveAndClose() {
-    // 画面の入力を変数にまとめる
+    console.log("保存ボタンが押されました"); // F12で確認用
+    
     allAccountIds.forEach(id => {
         const nameInput = document.getElementById(`name-${id}`);
         const hideInput = document.getElementById(`hide-${id}`);
@@ -914,25 +915,32 @@ async function saveAndClose() {
     });
 
     try {
-        // Workersへ送信（ここが完了するまで待機する）
+        // タイムアウト（5秒で諦める）を設定してフリーズを防ぐ
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         const response = await fetch(BASE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: accountSettings })
+            body: JSON.stringify({ settings: accountSettings }),
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
         if (response.ok) {
-            console.log("Save successful");
-            // 成功したら即座に画面を更新して閉じる
-            closeSettings();
-            updateUI();
+            alert("サーバー保存完了！");
         } else {
-            alert("サーバー側で保存が拒否されました");
+            alert("サーバーがエラーを返しました: " + response.status);
         }
     } catch (e) {
-        console.error("Save error:", e);
-        alert("通信エラーが発生しました");
+        console.error("通信エラー:", e);
+        alert("保存に失敗しました。URLが正しいか、Workersが動いているか確認してください。");
     }
+
+    // サーバー保存の成否に関わらず、画面は閉じてローカルには反映させる
+    closeSettings();
+    updateUI();
 }
     
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
@@ -942,6 +950,7 @@ async function saveAndClose() {
 </body>
 
 </html>
+
 
 
 
