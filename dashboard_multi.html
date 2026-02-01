@@ -447,23 +447,29 @@ async function fetchAllData() {
         updateUI();
     }
 
-    function updateDropdown() {
-        const select = document.getElementById('accountSelector');
-        const currentVal = select.value;
-        select.innerHTML = `<option value="ALL">ALL ${currentViewType.toUpperCase()} ACCOUNTS</option>`;
-        
-        allAccountIds.forEach(id => {
-            const d = accountsData[id];
-            const s = accountSettings[id] || { isHidden: false };
-            if (d && (d.account_type || "Real") === currentViewType && !s.isHidden) {
-                const name = s.name ? s.name : id;
-                select.innerHTML += `<option value="${id}">${name}</option>`;
-            }
-        });
-        
-        const exists = Array.from(select.options).some(o => o.value === currentVal);
-        if(exists && currentVal) select.value = currentVal;
+function updateDropdown() {
+    const container = document.getElementById('settings-container');
+    container.innerHTML = ''; // 一度リセット
+
+    if (allAccountIds.length === 0) {
+        container.innerHTML = '<p>データが読み込まれていません</p>';
+        return;
     }
+
+    allAccountIds.forEach(id => {
+        const currentSettings = accountSettings[id] || { name: '', isHidden: false };
+        const div = document.createElement('div');
+        div.className = 'setting-item';
+        div.innerHTML = `
+            <label>ID: ${id}</label>
+            <input type="text" id="name-${id}" placeholder="名前を入力" value="${currentSettings.name || ''}">
+            <label>
+                <input type="checkbox" id="hide-${id}" ${currentSettings.isHidden ? 'checked' : ''}> 非表示
+            </label>
+        `;
+        container.appendChild(div);
+    });
+}
 
     function convertToJpy(amt, curr, isCent) {
         let v = parseFloat(amt) || 0;
@@ -901,12 +907,22 @@ async function fetchAllData() {
     }
 
 async function saveAndClose() {
+    // 念のため、データがあるか確認
+    if (allAccountIds.length === 0) {
+        alert("アカウントIDが見つかりません。まずはデータを読み込んでください。");
+        closeSettings();
+        return;
+    }
+
+    // 画面の入力を吸い上げる
     allAccountIds.forEach(id => {
         const nameInput = document.getElementById(`name-${id}`);
         const hideInput = document.getElementById(`hide-${id}`);
-        if (nameInput) {
+        
+        // 入力欄が見つかった場合だけ保存する
+        if (nameInput && hideInput) {
             accountSettings[id] = {
-                name: nameInput.value || id,
+                name: nameInput.value || id, // 空ならIDをそのまま名前に
                 isHidden: hideInput.checked
             };
         }
@@ -919,15 +935,19 @@ async function saveAndClose() {
             body: JSON.stringify({ settings: accountSettings })
         });
 
-        const resultText = await response.text(); // エラーの正体を受け取る
+        const resultText = await response.text();
 
         if (response.ok) {
-            alert("成功！: " + resultText);
+            // Skippedなら「変更なし」、Savedなら「保存完了」
+            if (resultText.includes("Skipped")) {
+                 alert("変更項目が検出されませんでした（保存するデータがありません）");
+            } else {
+                 alert("サーバー保存完了！: " + resultText);
+            }
             closeSettings();
             updateUI();
         } else {
-            // ここでエラーの正体を画面に出す！
-            alert("エラー発生！犯人はこれです:\n" + resultText);
+            alert("エラー: " + resultText);
         }
     } catch (e) {
         alert("通信エラー: " + e.message);
@@ -941,6 +961,7 @@ async function saveAndClose() {
 </body>
 
 </html>
+
 
 
 
