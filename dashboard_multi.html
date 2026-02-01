@@ -315,46 +315,44 @@
 async function fetchAllData() {
     try {
         const res = await fetch(BASE_URL);
-        if (!res.ok) throw new Error("Workers connection failed");
-        
-        const rawData = await res.json();
-        
+        const data = await res.json(); // ここで「大きな箱」を受け取る
+
+        // 箱の中から「利益」と「設定（名前）」を取り出す
+        const profits = data.profits || [];
+        const settings = data.settings || [];
+
         accountsData = {};
         allAccountIds = [];
 
-        rawData.forEach(item => {
-            // Workersから届くキー名: account_id, amount, timestamp
+        // 1. D1データベースから届いた「名前設定」を反映する
+        settings.forEach(s => {
+            accountSettings[s.account_id] = {
+                name: s.name,
+                isHidden: s.is_hidden === 1
+            };
+        });
+
+        // 2. 利益データをカレンダーの形式に整理する
+        profits.forEach(item => {
             const id = item.account_id;
-            
             if (!accountsData[id]) {
-                accountsData[id] = {
-                    balance: 0,
-                    currency: "JPY", 
-                    account_type: "Real", // 必要に応じてWorkers側で判定
-                    history: []
-                };
+                accountsData[id] = { balance: 0, currency: "JPY", history: [] };
                 allAccountIds.push(id);
             }
-
-            // 特殊な残高データ（9999年）の場合
             if (item.timestamp.startsWith("9999")) {
                 accountsData[id].balance = Number(item.amount);
             } else {
-                // ここが重要！既存のHTMLロジックが動くようにキー名を合わせる
                 accountsData[id].history.push({
-                    profit: Number(item.amount), // amount を profit に変換
-                    swap: 0,
-                    commission: 0,
-                    close_time: item.timestamp.replace(/-/g, '.') // 2026-02-01 -> 2026.02.01
+                    profit: Number(item.amount),
+                    close_time: item.timestamp.replace(/-/g, '.')
                 });
             }
         });
 
         updateDropdown();
         updateUI();
-        document.getElementById('lastTime').innerText = new Date().toLocaleTimeString();
     } catch (e) {
-        console.error("Data fetch error:", e);
+        console.error("データの読み込みに失敗しました:", e);
     }
 }
 
@@ -930,4 +928,5 @@ async function fetchAllData() {
 </body>
 
 </html>
+
 
