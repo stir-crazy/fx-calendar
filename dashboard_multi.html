@@ -2,970 +2,290 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trade Canvas | STIR TRACKER</title>
-    <link rel="stylesheet" href="style.css?v=3">
-    <link rel="stylesheet" href="theme.css">
-<style>
-
-.padded-section, 
-.stats-container, 
-.details-container, 
-.global-footer {
-    width: 100%;
-    margin: 0 auto 20px;
-
-}
-
-
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    width: 100%;
-    gap: 0 !important;
-    border-top: 1px solid var(--border);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    box-sizing: border-box;
-}
-
-.cell {
-    aspect-ratio: 0.9;
-    background: var(--card-bg);
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center; 
-    padding: 2px;
-    overflow: hidden;
-}
-
-.cell:nth-child(7n) { border-right: none; }
-
-.header-cell {
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    padding: 5px 0;
-}
-.header-cell:nth-child(7n) { border-right: none; }
-
-.cell-value {
-    font-size: 9px;
-    font-weight: bold;
-    text-align: center;
-    width: 100%;
-    line-height: 1.1;
-    word-break: break-all;
-    white-space: normal;
-}
-
-#settingsModal .modal-content {
-    width: 90%;
-    max-width: 400px;
-}
-
-/* --- ▼新規追加：口座別リスト用のスタイル（Breakdown）▼ --- */
-.bd-box {
-    margin-bottom: 20px;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-}
-.bd-header {
-    background: var(--bg-color);
-    padding: 8px 10px;
-    font-size: 11px;
-    font-weight: bold;
-    color: var(--text-dim);
-    border-bottom: 1px solid var(--border);
-}
-.bd-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-}
-.bd-row:last-child { border-bottom: none; }
-.bd-name { color: var(--text-main); font-weight: bold; }
-.bd-val { font-family: monospace; font-weight: bold; }
-
-</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Account FX Calendar</title>
+    <style>
+        /* シンプルで崩れにくいスタイル */
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
+        h1 { text-align: center; color: #333; }
+        .controls { text-align: center; margin-bottom: 20px; }
+        select, button { padding: 10px; font-size: 16px; margin: 5px; }
+        
+        /* カレンダーのスタイル */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .day-cell {
+            background: white;
+            padding: 10px;
+            min-height: 80px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .day-header { font-weight: bold; font-size: 0.9em; color: #666; margin-bottom: 5px; }
+        .profit-positive { color: #28a745; font-weight: bold; }
+        .profit-negative { color: #dc3545; font-weight: bold; }
+        .daily-total { font-size: 1.1em; margin-top: 5px; display: block; }
+        
+        /* 設定モーダル */
+        #settings-modal {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 20px; border-radius: 8px;
+            width: 90%; max-width: 400px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .setting-item { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .setting-item input[type="text"] { width: 100%; box-sizing: border-box; padding: 5px; margin-top: 5px; }
+    </style>
 </head>
 <body>
 
-<div id="update-flash"></div>
+    <h1>FX Profit Calendar</h1>
 
-    <header class="global-header">
-        <div class="nav-container">
-            <a href="index.html" class="logo">
-                <span class="c-stir">
-                    <span class="c1">S</span><span class="c2">T</span><span class="c3">I</span><span class="c4">R</span>
-                </span>
-                &nbsp;
-                <span class="c-tracker">
-                    <span class="c5">T</span><span class="c6">R</span><span class="c7">A</span><span class="c8">C</span><span class="c9">K</span><span class="c10">E</span><span class="c11">R</span>
-                </span>
-            </a>
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="dashboard_multi.html" class="nav-icon active" title="Trade Canvas">
-                        <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="setup.html" class="nav-icon" title="Sync Setup">
-                        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="https://stir-crazy.com/" target="_blank" class="nav-icon" title="Update Info">
-                        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
-                    </a>
-                </li>
-            </ul>
-        </div>
-    </header>
+    <div class="controls">
+        <select id="account-select" onchange="updateUI()">
+            <option value="all">全口座合計</option>
+        </select>
+        <button onclick="openSettings()">⚙ 設定</button>
+    </div>
 
-<div class="container">
-    
-    <div class="padded-section" style="padding-bottom:0;">
-        <div class="type-switch-container card-style">
-            <button class="type-btn active" id="btnReal" onclick="switchType('Real')">REAL ACCOUNT</button>
-            <button class="type-btn" id="btnDemo" onclick="switchType('Demo')">DEMO ACCOUNT</button>
-        </div>
+    <h2 style="text-align:center">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="current-month-label"></span>
+        <button onclick="changeMonth(1)">▶</button>
+    </h2>
 
-        <div class="top-bar">
-            <select id="accountSelector" class="account-select" onchange="updateUI()"></select>
-            <button class="settings-btn" onclick="openSettings()">⚙ Setting</button>
+    <div id="calendar" class="calendar-grid"></div>
+
+    <div id="settings-modal">
+        <div class="modal-content">
+            <h3>口座名の設定</h3>
+            <div id="settings-container"></div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button onclick="closeSettings()">キャンセル</button>
+                <button onclick="saveAndClose()" style="background:#007bff; color:white;">保存 (Apply)</button>
+            </div>
         </div>
     </div>
 
-    <div class="calendar-wrapper">
-        <div class="calendar-header">
-            <button onclick="changeMonth(-1)" style="background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--text-main); width:28px; height:28px; border-radius:50%; cursor:pointer;">＜</button>
-            <div id="dateInfo" style="font-weight:bold; font-size:15px; color:var(--text-main);">2026 / 1</div>
-            <button onclick="changeMonth(1)" style="background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--text-main); width:28px; height:28px; border-radius:50%; cursor:pointer;">＞</button>
-        </div>
-        <div class="grid" id="calendarGrid"></div>
-    </div>
+    <script>
+        // ★★★ ここをあなたのWorkersのURLに書き換えてください ★★★
+        const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
+        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-    <div class="padded-section">
-        
-        <div id="monthlyBreakdownContainer" class="bd-box" style="display:none;">
-            <div class="bd-header">MONTHLY BREAKDOWN</div>
-            <div id="monthlyBreakdownList"></div>
-        </div>
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        let accountsData = {};
+        let allAccountIds = [];
+        let accountSettings = {}; 
 
-        <div class="stats-container">
-            <div class="stat-panel card-style">
-                <span style="font-size:9px; color:var(--text-dim); margin-bottom:5px;">MONTHLY PROFIT</span>
-                <div><span class="main-val" id="totalProfit">+0</span><span style="font-size:10px; color:var(--text-dim);"> JPY</span></div>
-                <div class="sub-val-box"><div class="sub-val" id="subProfit">(+0 USD)</div></div>
-            </div>
-            <div class="stat-panel card-style">
-                <span style="font-size:9px; color:var(--text-dim); margin-bottom:5px;">MONTHLY GAIN</span>
-                <div><span class="main-val" id="monthlyGain" style="color:var(--accent-green);">+0.00 %</span></div>
-                <div class="sub-val-box"><div class="sub-val" id="monthlyGainSub">Avg: 0.00 % / day</div></div>
-            </div>
-        </div>
-
-        <div class="details-container total-stats-section">
-            <div class="section-header" id="statsTitle">TOTAL PORTFOLIO STATISTICS</div>
-            <div class="total-stats-grid">
-                <div class="ts-card card-style">
-                    <div class="ts-label">TOTAL GAIN</div>
-                    <div class="ts-value" id="totalGainPct">+0.00 %</div>
-                </div>
-                <div class="ts-card card-style">
-                    <div class="ts-label">TOTAL PROFIT</div>
-                    <div class="ts-value" id="totalProfitAllTime">+0 </div><span style="font-size:10px; color:var(--text-dim);"> JPY</span>
-                </div>
-                <div class="ts-card full-width card-style">
-                    <div class="ts-label">TOTAL BALANCE</div>
-                    <div class="ts-value" id="totalBalance" style="color:#ffd700;">0 </div><span style="font-size:10px; color:var(--text-dim);"> JPY</span>
-                </div>
-            </div>
-        </div>
-
-        <div id="accountDetailsPanel" class="details-container" style="display:none; margin-bottom:20px;"></div>
-
-        <footer class="global-footer">
-            Last Update: <span id="lastTime">--:--:--</span> (Rate: 1$ = <span id="currentRate">153.14</span>円)<br>
-            &copy; 2026 STIR CRAZY. All rights reserved.
-        </footer>
-    </div>
-</div>
-
-<div class="modal-overlay" id="detailModal">
-    <div class="modal-content card-style">
-        <button class="close-modal-btn" onclick="closeDetailModal()">✕</button>
-        <span class="modal-title" id="detailDateLabel">Details</span>
-        <div id="breakdownList" style="background:var(--bg-grid); border-radius:8px; border:var(--border-width) solid var(--border); margin-bottom:15px; max-height:240px; overflow-y:auto;"></div>
-        
-        <div id="editView" style="display:none; padding:10px; background:var(--bg-grid); border-radius:8px;">
-            <div id="editTargetName" style="color:var(--accent-blue); font-weight:bold; font-size:16px; margin-bottom:5px; text-align:center;">Name</div>
-            <div id="editTargetInfo" style="color:var(--text-dim); font-size:10px; text-align:center; margin-bottom:15px;">Auto Data: 0 JPY</div>
-            
-            <label style="font-size:10px; color:var(--text-dim);">Override Profit (JPY):</label>
-            <input type="number" id="manualProfitInput" class="simple-input" placeholder="Enter correct value">
-            
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button style="flex:1; padding:10px; background:var(--btn-bg); color:var(--text-dim); border:1px solid var(--btn-border); border-radius:6px; cursor:pointer;" onclick="resetToAuto()">Reset (Auto)</button>
-                <button style="flex:2; padding:10px; background:var(--accent-blue); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="saveManualProfit()">Save</button>
-            </div>
-            <button onclick="cancelEdit()" style="width:100%; margin-top:10px; padding:5px; background:transparent; border:none; color:var(--text-dim); font-size:10px; cursor:pointer;">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="settingsModal">
-    <div class="modal-content card-style" style="max-height:85vh; overflow-y:auto;">
-        <button class="close-modal-btn" onclick="closeSettings()">✕</button>
-        <span class="modal-title">Account Settings</span>
-        
-        <div style="text-align:center; margin-bottom:15px; font-size:11px; color:var(--text-dim); font-weight:bold;">DESIGN THEME</div>
-        <div class="theme-selector">
-            <button class="theme-btn t-cyber" onclick="changeTheme('cyber')" title="Cyber Dark"></button>
-            <button class="theme-btn t-light" onclick="changeTheme('light')" title="Snow Light"></button>
-            <button class="theme-btn t-midnight" onclick="changeTheme('midnight')" title="Midnight Blue"></button>
-            <button class="theme-btn t-crazy" onclick="changeTheme('crazy')" title="Crazy Pop"></button>
-            <button class="theme-btn t-muffin" onclick="changeTheme('muffin')" title="Sweet Muffin"></button>
-            <button class="theme-btn t-usa-pop" onclick="changeTheme('usa-pop')" title="USA Pop"></button>
-        </div>
-
-        <div style="margin:15px 0; border-bottom:1px solid var(--border);"></div>
-        
-        <button id="showManualFormBtn" onclick="toggleManualForm(true)" style="width:100%; padding:10px; background:transparent; border:2px dashed var(--border); color:var(--text-dim); border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:15px;">
-            + Add New Manual Account
-        </button>
-
-        <div id="manualFormArea" style="display:none; background:var(--bg-grid); padding:10px; border-radius:8px; margin-bottom:20px;">
-            <div style="font-size:11px; color:var(--text-dim); font-weight:bold; margin-bottom:10px;">CREATE NEW ACCOUNT</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <input id="newManualName" class="simple-input" placeholder="Account Name (e.g. HighLow)" style="margin-bottom:0; background:var(--card-bg);">
-                <div style="display:flex; gap:10px;">
-                    <select id="newManualCurrency" class="simple-input" style="flex:1; margin-bottom:0; background:var(--card-bg);">
-                        <option value="JPY">JPY</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                    </select>
-                    <select id="newManualType" class="simple-input" style="flex:1; margin-bottom:0; background:var(--card-bg);">
-                        <option value="Real">Real</option>
-                        <option value="Demo">Demo</option>
-                    </select>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <button onclick="toggleManualForm(false)" style="flex:1; padding:8px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:4px; cursor:pointer;">Cancel</button>
-                    <button onclick="addManualAccount()" style="flex:2; padding:8px; background:var(--accent-green); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Create</button>
-                </div>
-            </div>
-        </div>
-
-        <div style="font-size:11px; color:var(--text-dim); font-weight:bold; margin-bottom:10px;">EXISTING ACCOUNTS</div>
-        <div id="idListContainer" style="max-height:250px; overflow-y:auto; padding-right:5px;"></div>
-        
-        <button style="width:100%; padding:14px; background:var(--accent-blue); color:white; border:none; border-radius:var(--border-radius); font-weight:bold; cursor:pointer; margin-top:15px; box-shadow:var(--shadow-style);" onclick="saveAndClose()">Apply Settings</button>
-    </div>
-</div>
-
-<script>
-    const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
-    const RATE_API = "https://api.exchangerate-api.com/v4/latest/USD";
-    let allAccountIds = [], accountSettings = {}, accountsData = {}, manualData = {};
-    let displayDate = new Date(), usdToJpyRate = 153.14, currentViewType = 'Real';
-    let currentEditingDate = "", currentTargetId = "", currentEditingEaProfit = 0;
-
-    const pencilSvg = `<svg viewBox="0 0 24 24" style="width:14px; height:14px; fill:var(--text-dim);"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
-    const trashSvg = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
-    const eyeOpenSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
-    const eyeSlashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
-
-    async function init() {
-        if(localStorage.getItem('manualData')) manualData = JSON.parse(localStorage.getItem('manualData'));
-        const savedTheme = localStorage.getItem('theme');
-        if(savedTheme) { document.documentElement.setAttribute('data-theme', savedTheme); } 
-        else { updateActiveThemeBtn('cyber'); }
-
-        await fetchRateOnceADay();
-        await fetchAllData();
-        setInterval(fetchAllData, 10000);
-        
-        initPullToRefresh();
-    }
-
-    async function fetchRateOnceADay() {
-        const todayStr = new Date().toLocaleDateString();
-        const saved = JSON.parse(localStorage.getItem('savedUsdRate'));
-        if (saved && saved.date === todayStr) { usdToJpyRate = saved.rate; updateRateDisplay(); return; }
-        try { const res = await fetch(RATE_API); const data = await res.json(); usdToJpyRate = data.rates.JPY; localStorage.setItem('savedUsdRate', JSON.stringify({date:todayStr, rate:usdToJpyRate})); updateRateDisplay(); } catch(e){}
-    }
-    
-    function updateRateDisplay() { document.getElementById('currentRate').innerText = usdToJpyRate; }
-
-async function fetchAllData() {
-    try {
-        const res = await fetch(BASE_URL);
-        const data = await res.json(); // ここで「大きな箱」を受け取る
-
-        // 箱の中から「利益」と「設定（名前）」を取り出す
-        const profits = data.profits || [];
-        const settings = data.settings || [];
-
-        accountsData = {};
-        allAccountIds = [];
-
-        // 1. D1データベースから届いた「名前設定」を反映する
-        settings.forEach(s => {
-            accountSettings[s.account_id] = {
-                name: s.name,
-                isHidden: s.is_hidden === 1
-            };
-        });
-
-        // 2. 利益データをカレンダーの形式に整理する
-        profits.forEach(item => {
-            const id = item.account_id;
-            if (!accountsData[id]) {
-                accountsData[id] = { balance: 0, currency: "JPY", history: [] };
-                allAccountIds.push(id);
-            }
-            if (item.timestamp.startsWith("9999")) {
-                accountsData[id].balance = Number(item.amount);
-            } else {
-                accountsData[id].history.push({
-                    profit: Number(item.amount),
-                    close_time: item.timestamp.replace(/-/g, '.')
-                });
-            }
-        });
-
-        updateDropdown();
-        updateUI();
-    } catch (e) {
-        console.error("データの読み込みに失敗しました:", e);
-    }
-}
-
-    function initPullToRefresh() {
-        let touchStartY = 0;
-        let isPulling = false;
-        
-        window.addEventListener('touchstart', (e) => {
-            if (window.scrollY === 0) {
-                touchStartY = e.touches[0].clientY;
-                isPulling = true;
-            }
-        }, {passive: true});
-
-        window.addEventListener('touchmove', (e) => {
-            if(!isPulling) return;
-            const y = e.touches[0].clientY;
-            if(y - touchStartY > 150) { 
-            }
-        }, {passive: true});
-
-        window.addEventListener('touchend', async (e) => {
-            if(!isPulling) return;
-            const y = e.changedTouches[0].clientY;
-            if(y - touchStartY > 100 && window.scrollY === 0) {
-                const flash = document.getElementById('update-flash');
-                flash.style.opacity = '1';
-                await fetchAllData();
-                setTimeout(() => { flash.style.opacity = '0'; }, 300);
-            }
-            isPulling = false;
-        });
-    }
-
-    function toggleManualForm(show) {
-        document.getElementById('showManualFormBtn').style.display = show ? 'none' : 'block';
-        document.getElementById('manualFormArea').style.display = show ? 'block' : 'none';
-    }
-
-    async function addManualAccount() {
-        const name = document.getElementById('newManualName').value.trim();
-        const currency = document.getElementById('newManualCurrency').value;
-        const type = document.getElementById('newManualType').value;
-
-        if(!name) { alert("Please enter a name"); return; }
-        
-        const newId = "manual_" + Date.now();
-        const newSettings = {
-            name: name,
-            isHidden: false,
-            isManual: true,
-            currency: currency,
-            account_type: type
+        // 1. 起動時にデータを読み込む
+        window.onload = function() {
+            fetchAllData();
         };
-        
-        const btn = event.target;
-        const orgText = btn.innerText;
-        btn.innerText = "Creating...";
 
-        try {
-            await fetch(`${BASE_URL}/settings/${newId}.json`, {
-                method: 'PUT',
-                body: JSON.stringify(newSettings)
-            });
+        // 2. データ取得と整理
+        async function fetchAllData() {
+            try {
+                const res = await fetch(BASE_URL);
+                const data = await res.json();
+                
+                // 箱からデータを取り出す
+                const profits = data.profits || data || []; // 古い形式にも対応
+                const settings = data.settings || [];
 
-            accountSettings[newId] = newSettings;
-            document.getElementById('newManualName').value = "";
-            toggleManualForm(false);
-            
-            await fetchAllData();
-            
-            if(type !== currentViewType) {
-                switchType(type);
-            } else {
-                openSettings(); 
+                accountsData = {};
+                allAccountIds = [];
+                
+                // 設定を反映
+                settings.forEach(s => {
+                    accountSettings[s.account_id] = {
+                        name: s.name,
+                        isHidden: s.is_hidden === 1
+                    };
+                });
+
+                // 利益データを整理
+                profits.forEach(item => {
+                    const id = item.account_id;
+                    if (!accountsData[id]) {
+                        accountsData[id] = { balance: 0, history: [] };
+                        allAccountIds.push(id);
+                    }
+                    if (item.timestamp.startsWith("9999")) {
+                        accountsData[id].balance = Number(item.amount);
+                    } else {
+                        accountsData[id].history.push({
+                            profit: Number(item.amount),
+                            close_time: item.timestamp.replace(/-/g, '.')
+                        });
+                    }
+                });
+
                 updateDropdown();
+                updateUI();
+            } catch (e) {
+                console.error("Load Error:", e);
+                alert("データの読み込みに失敗しました。URLを確認してください。");
             }
-            
-        } catch(e) {
-            console.error(e);
-            alert("Error creating account");
-        } finally {
-            btn.innerText = orgText;
         }
-    }
 
-    function switchType(type) {
-        currentViewType = type;
-        document.getElementById('btnReal').className = `type-btn ${type === 'Real' ? 'active' : ''}`;
-        document.getElementById('btnDemo').className = `type-btn ${type === 'Demo' ? 'active' : ''}`;
-        updateDropdown(); 
-        updateUI();
-    }
-
-function updateDropdown() {
-    const container = document.getElementById('settings-container');
-    container.innerHTML = ''; // 一度リセット
-
-    if (allAccountIds.length === 0) {
-        container.innerHTML = '<p>データが読み込まれていません</p>';
-        return;
-    }
-
-    allAccountIds.forEach(id => {
-        const currentSettings = accountSettings[id] || { name: '', isHidden: false };
-        const div = document.createElement('div');
-        div.className = 'setting-item';
-        div.innerHTML = `
-            <label>ID: ${id}</label>
-            <input type="text" id="name-${id}" placeholder="名前を入力" value="${currentSettings.name || ''}">
-            <label>
-                <input type="checkbox" id="hide-${id}" ${currentSettings.isHidden ? 'checked' : ''}> 非表示
-            </label>
-        `;
-        container.appendChild(div);
-    });
-}
-
-    function convertToJpy(amt, curr, isCent) {
-        let v = parseFloat(amt) || 0;
-        if (isCent || curr === "USC" || curr === "JPC") return (v / 100) * usdToJpyRate;
-        return (curr === "JPY" || !curr) ? v : v * usdToJpyRate;
-    }
-    
-    function normalizeHistory(historyData) {
-        if (!historyData) return [];
-        if (Array.isArray(historyData)) return historyData;
-        if (typeof historyData === 'object') return Object.values(historyData);
-        return [];
-    }
-
-    function updateUI() {
-        const selectedId = document.getElementById('accountSelector').value;
-        const year = displayDate.getFullYear(), month = displayDate.getMonth() + 1;
-        document.getElementById('dateInfo').innerText = `${year} / ${month}`;
-        
-        let displayData = { days: {}, month_profit: 0, balance: 0 };
-        let totalProfitAllTime = 0;
-        
-        // ★ 口座別月次内訳用
-        let monthlyAccountBreakdown = [];
-
-        let targetIds = (selectedId === 'ALL') 
-            ? allAccountIds.filter(id => {
-                const d = accountsData[id];
-                const s = accountSettings[id] || { isHidden: false };
-                return d && (d.account_type || "Real") === currentViewType && !s.isHidden;
-            })
-            : [selectedId];
-
-        targetIds.forEach(id => {
-            const d = accountsData[id];
-            const s = accountSettings[id] || { name: id };
-            let accountMonthlyProfit = 0; 
-
-            if (d) {
-                displayData.balance += convertToJpy(d.balance || 0, d.currency, false);
-                
-                if(d.history) {
-                    const hList = normalizeHistory(d.history);
-                    hList.forEach(trade => {
-                        const p = (parseFloat(trade.profit)||0) + (parseFloat(trade.swap)||0) + (parseFloat(trade.commission)||0);
-                        const v = convertToJpy(p, d.currency, false);
-                        totalProfitAllTime += v;
-                        
-                        // 月次集計
-                        if (trade.close_time && trade.close_time.startsWith(`${year}.${String(month).padStart(2,'0')}`)) {
-                            accountMonthlyProfit += v;
-                        }
-                    });
+        // 3. 設定画面を作る（IDを確実につける）
+        function updateDropdown() {
+            const select = document.getElementById('account-select');
+            const container = document.getElementById('settings-container');
+            
+            // プルダウン更新
+            select.innerHTML = '<option value="all">全口座合計</option>';
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || {};
+                if (!s.isHidden) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = s.name || id;
+                    select.appendChild(option);
                 }
-            }
-            
-            // 手動データの集計
-            Object.keys(manualData).forEach(safeKey => {
-                 if (safeKey.endsWith(`_${id}`)) {
-                     const val = parseFloat(manualData[safeKey]);
-                     totalProfitAllTime += val;
-
-                     const datePart = safeKey.split('_')[0]; 
-                     const [y, m, d] = datePart.split('-');
-                     if (parseInt(y) === year && parseInt(m) === month) {
-                         accountMonthlyProfit += val;
-                     }
-                 }
             });
-            
-            // 月次リストに追加
-            if (selectedId === 'ALL') {
-                monthlyAccountBreakdown.push({
-                    name: s.name || id,
-                    profit: accountMonthlyProfit
+
+            // 設定画面の中身更新
+            container.innerHTML = '';
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || { name: '', isHidden: false };
+                const div = document.createElement('div');
+                div.className = 'setting-item';
+                div.innerHTML = `
+                    <label>ID: ${id}</label>
+                    <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="表示名">
+                    <label style="display:block; margin-top:5px;">
+                        <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> 一覧から隠す
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 4. 設定を保存する（IDを確実に読み取る）
+        async function saveAndClose() {
+            allAccountIds.forEach(id => {
+                const nameInput = document.getElementById(`name-${id}`);
+                const hideInput = document.getElementById(`hide-${id}`);
+                if (nameInput) {
+                    accountSettings[id] = {
+                        name: nameInput.value || id,
+                        isHidden: hideInput.checked
+                    };
+                }
+            });
+
+            try {
+                const response = await fetch(BASE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings: accountSettings })
                 });
-            }
-        });
-
-        // ★ 月次内訳リストの表示処理
-        const breakdownContainer = document.getElementById('monthlyBreakdownContainer');
-        const breakdownList = document.getElementById('monthlyBreakdownList');
-        
-        if (selectedId === 'ALL' && monthlyAccountBreakdown.length > 0) {
-            // 利益の大きい順にソート
-            monthlyAccountBreakdown.sort((a, b) => b.profit - a.profit);
-            
-            let html = '';
-            monthlyAccountBreakdown.forEach(item => {
-                const p = Math.floor(item.profit);
-                const colorClass = p >= 0 ? 'win-text' : 'loss-text';
-                const sign = p > 0 ? '+' : '';
-                html += `
-                    <div class="bd-row">
-                        <span class="bd-name">${item.name}</span>
-                        <span class="bd-val ${colorClass}">${sign}${p.toLocaleString()}</span>
-                    </div>`;
-            });
-            breakdownList.innerHTML = html;
-            breakdownContainer.style.display = 'block';
-        } else {
-            breakdownContainer.style.display = 'none';
-        }
-
-        // カレンダー生成
-        const grid = document.getElementById('calendarGrid');
-        const theme = document.documentElement.getAttribute('data-theme');
-        const sunClass = theme === 'muffin' ? 'header-cell sun' : 'header-cell';
-        const satClass = theme === 'muffin' ? 'header-cell sat' : 'header-cell';
-        const sunStyle = (theme !== 'muffin' && theme !== 'usa-pop') ? 'style="color:var(--accent-red);"' : '';
-        const satStyle = (theme !== 'muffin' && theme !== 'usa-pop') ? 'style="color:var(--accent-blue);"' : '';
-
-        grid.innerHTML = `<div class="${sunClass}" ${sunStyle}>SUN</div><div class="header-cell">MON</div><div class="header-cell">TUE</div><div class="header-cell">WED</div><div class="header-cell">THU</div><div class="header-cell">FRI</div><div class="${satClass}" ${satStyle}>SAT</div>`;
-        
-        const first = new Date(year, month - 1, 1).getDay(), last = new Date(year, month, 0).getDate();
-        for(let i=0; i<first; i++) grid.innerHTML += `<div class="cell" style="background:var(--bg-grid);cursor:default;"></div>`;
-
-        let monthlyTotalWithManual = 0;
-
-        for(let d=1; d<=last; d++) {
-            const dateDot = `${year}.${String(month).padStart(2,'0')}.${String(d).padStart(2,'0')}`;
-            const dateHyphen = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            let dailyTotal = 0;
-
-            targetIds.forEach(id => {
-                const dData = accountsData[id];
-                let eaVal = 0;
                 
-                if(dData && dData.history) {
-                    const hList = normalizeHistory(dData.history);
-                    hList.forEach(trade => {
-                        if(trade.close_time && trade.close_time.startsWith(dateDot)) {
-                            const p = (parseFloat(trade.profit)||0) + (parseFloat(trade.swap)||0) + (parseFloat(trade.commission)||0);
-                            eaVal += convertToJpy(p, dData.currency, false);
-                        }
-                    });
-                }
-                
-                const safeKey = `${dateHyphen}_${id}`;
-                if(manualData.hasOwnProperty(safeKey)) {
-                    dailyTotal += (eaVal + manualData[safeKey]);
+                const txt = await response.text();
+                if (response.ok) {
+                    if (txt.includes("Skipped")) {
+                        // データはあるけど変更がない場合など
+                        alert("変更データが空でした。画面を再読み込みしてリトライしてください。");
+                    } else {
+                        alert("✅ サーバーに保存しました！: " + txt);
+                    }
+                    closeSettings();
+                    // 再読み込みして最新状態にする
+                    location.reload(); 
                 } else {
-                    dailyTotal += eaVal;
+                    alert("保存エラー: " + txt);
                 }
-            });
+            } catch (e) {
+                alert("通信エラー: " + e.message);
+            }
+        }
+
+        // --- 以下、カレンダー表示ロジック ---
+        function updateUI() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
             
-            monthlyTotalWithManual += dailyTotal;
+            const selectedId = document.getElementById('account-select').value;
+            const year = currentYear;
+            const month = currentMonth;
 
-            let dayColor = 'var(--text-dim)';
-            if (theme === 'muffin') { dayColor = (first+d-1)%7 === 0 ? 'var(--accent-red)' : (first+d-1)%7 === 6 ? 'var(--accent-blue)' : 'var(--text-dim)'; }
-            else if (theme === 'crazy') { dayColor = (first+d-1)%7 === 0 ? '#FF1744' : (first+d-1)%7 === 6 ? '#00B0FF' : '#424242'; }
-            else if (theme === 'usa-pop') { dayColor = (first+d-1)%7 === 0 ? 'var(--accent-red)' : (first+d-1)%7 === 6 ? 'var(--accent-blue)' : 'var(--text-main)'; }
-            else { dayColor = (first+d-1)%7 === 0 ? '#ff4b4b' : (first+d-1)%7 === 6 ? '#0096ff' : 'var(--text-dim)'; }
+            document.getElementById('current-month-label').textContent = `${year}年 ${month + 1}月`;
 
-            grid.innerHTML += `<div class="cell" onclick="openDetailModal(${year},${month},${d})">
-                <div class="day-num" style="color:${dayColor}">${d}</div>
-                ${dailyTotal!==0 ? `<div class="cell-value ${dailyTotal>0?'win-text':'loss-text'}">${Math.abs(Math.floor(dailyTotal))}</div>` : ''}
-            </div>`;
-        }
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        const p = Math.floor(monthlyTotalWithManual);
-        document.getElementById('totalProfit').innerText = (p >= 0 ? '+' : '') + p.toLocaleString();
-        document.getElementById('totalProfit').className = "main-val " + (p >= 0 ? 'win-text' : 'loss-text');
-        document.getElementById('subProfit').innerText = "(" + (p >= 0 ? '+' : '') + Math.floor(monthlyTotalWithManual / usdToJpyRate).toLocaleString() + " USD)";
-        
-        const totalBal = displayData.balance; 
-        const prevMonthBalance = totalBal - monthlyTotalWithManual;
-        
-        let monthlyGainPct = 0;
-        if (prevMonthBalance > 0) {
-            monthlyGainPct = (monthlyTotalWithManual / prevMonthBalance) * 100;
-        }
-
-        let totalGainPct = 0;
-        const estimatedInitial = totalBal - totalProfitAllTime;
-        if (estimatedInitial > 0) {
-            totalGainPct = (totalProfitAllTime / estimatedInitial) * 100;
-        } else if (totalBal > 0) {
-            totalGainPct = (totalProfitAllTime / totalBal) * 100;
-        }
-
-        document.getElementById('monthlyGain').innerText = (monthlyGainPct >= 0 ? '+' : '') + monthlyGainPct.toFixed(2) + " %";
-        document.getElementById('monthlyGain').className = "main-val " + (monthlyGainPct >= 0 ? 'win-text' : 'loss-text');
-        document.getElementById('monthlyGainSub').innerText = "Avg: " + (monthlyGainPct / 30).toFixed(2) + " % / day";
-
-        document.getElementById('statsTitle').innerText = (selectedId === 'ALL') ? "TOTAL PORTFOLIO STATISTICS" : `STATISTICS: ${selectedId}`;
-        
-        document.getElementById('totalGainPct').innerText = (totalGainPct >= 0 ? '+' : '') + totalGainPct.toFixed(2) + " %";
-        document.getElementById('totalGainPct').className = "ts-value " + (totalGainPct >= 0 ? 'win-text' : 'loss-text');
-
-        document.getElementById('totalProfitAllTime').innerText = (totalProfitAllTime >= 0 ? '+' : '') + Math.floor(totalProfitAllTime).toLocaleString() + " ";
-        document.getElementById('totalBalance').innerText = Math.floor(totalBal).toLocaleString() + " ";
-
-        renderAccountInfo(selectedId);
-    }
-
-    function renderAccountInfo(selectedId) {
-        const detPanel = document.getElementById('accountDetailsPanel');
-        if (selectedId !== 'ALL' && accountsData[selectedId]) {
-            const d = accountsData[selectedId];
-            const platform = d.platform || "MT5";
-            const accMode = d.account_type || "Real";
-            const size = d.size || 100000;
-            const currency = d.currency || "";
-            let lotDesc = "";
-            const sizeStr = Number(size).toLocaleString();
-            if (size === 100000 && (currency === 'USC' || currency === 'JPC' || currency === 'ERC')) { lotDesc = `${sizeStr} Cents`; } 
-            else { lotDesc = `${sizeStr} Units`; }
-
-            if(d.isManual) {
-                 detPanel.style.display = 'block';
-                 detPanel.innerHTML = `
-                    <div class="account-details-box card-style">
-                        <div style="font-size:11px;color:var(--text-dim);font-weight:bold;margin-bottom:10px;border-left:3px solid var(--accent-orange);padding-left:5px;">MANUAL ACCOUNT INFO</div>
-                        <div class="detail-row"><span>Type</span><span>Manual Input</span></div>
-                        <div class="detail-row"><span>Currency</span><span>${d.currency}</span></div>
-                        <div class="detail-row"><span>Status</span><span style="color:var(--accent-green);">Active</span></div>
-                    </div>`;
-                 return;
+            // 空白セル
+            for (let i = 0; i < firstDay; i++) {
+                calendar.appendChild(createCell(''));
             }
 
-            detPanel.style.display = 'block';
-            detPanel.innerHTML = `
-                <div class="account-details-box card-style">
-                    <div style="font-size:11px;color:var(--text-dim);font-weight:bold;margin-bottom:10px;border-left:3px solid var(--accent-orange);padding-left:5px;">ACCOUNT INFO</div>
-                    <div class="detail-row"><span>Broker</span><span>${d.broker || '---'}</span></div>
-                    <div class="detail-row"><span>Terminal</span><span>${platform} / ${accMode}</span></div>
-                    <div class="detail-row"><span>1 Lot Size</span><span style="font-weight:bold; color:var(--text-main);">${lotDesc}</span></div>
-                    <div class="detail-row"><span>Currency</span><span>${d.currency || '---'}</span></div>
-                    <div class="detail-row"><span>Equity</span><span style="font-family:monospace;">${Math.floor(d.equity || 0).toLocaleString()}</span></div>
-                    <div class="detail-row"><span>Leverage</span><span>1:${d.leverage || '---'}</span></div>
-                </div>`;
-        } else {
-            detPanel.style.display = 'none';
-        }
-    }
+            // 日付セル
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+                let total = 0;
 
-    function openDetailModal(y, m, d) {
-        currentEditingDate = `${y}.${String(m).padStart(2,'0')}.${String(d).padStart(2,'0')}`;
-        const safeDate = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        
-        document.getElementById('detailDateLabel').innerText = "Details: " + currentEditingDate;
-        
-        const selId = document.getElementById('accountSelector').value;
-        const listEl = document.getElementById('breakdownList');
-        listEl.innerHTML = "";
-        
-        let targets = selId === 'ALL' ? allAccountIds.filter(id => {
-            const dData = accountsData[id];
-            const s = accountSettings[id] || { isHidden: false };
-            return dData && (dData.account_type || "Real") === currentViewType && !s.isHidden;
-        }) : [selId];
+                if (selectedId === 'all') {
+                    allAccountIds.forEach(id => {
+                        const s = accountSettings[id] || {};
+                        if (!s.isHidden) {
+                            total += getDailyProfit(id, dateStr);
+                        }
+                    });
+                } else {
+                    total = getDailyProfit(selectedId, dateStr);
+                }
 
-        targets.forEach(id => {
-            const dData = accountsData[id], s = accountSettings[id] || {isHidden:false};
-            const displayName = s.name ? s.name : id;
-            
-            let eaP = 0;
-            if(dData.history) {
-                 const hList = normalizeHistory(dData.history);
-                 hList.forEach(trade => {
-                     if(trade.close_time && trade.close_time.startsWith(currentEditingDate)) {
-                         const p = (parseFloat(trade.profit)||0) + (parseFloat(trade.swap)||0) + (parseFloat(trade.commission)||0);
-                         eaP += convertToJpy(p, dData.currency, false);
-                     }
-                 });
+                calendar.appendChild(createCell(d, total));
             }
-            
-            const safeKey = `${safeDate}_${id}`;
-            const diff = manualData[safeKey] || 0;
-            const total = eaP + diff;
-            const isEdited = manualData.hasOwnProperty(safeKey);
-
-            listEl.innerHTML += `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-bottom:1px solid var(--border);color:var(--text-main);">
-                <div style="font-weight:bold;font-size:13px;">
-                    ${displayName}
-                    ${isEdited ? '<span style="font-size:9px; color:var(--accent-orange); margin-left:5px;">(Edited)</span>' : ''}
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="${total>=0?'win-text':'loss-text'}" style="font-weight:bold;font-size:14px;">${total>0?'+':''}${Math.floor(total).toLocaleString()}</span>
-                    <button class="icon-btn" style="width:32px;height:32px;background:var(--btn-bg);" onclick="openAccountEdit('${id}',${eaP},${diff})">${pencilSvg}</button>
-                </div>
-            </div>`;
-        });
-        
-        document.getElementById('detailModal').style.display = 'flex';
-        document.getElementById('breakdownList').style.display = 'block'; 
-        document.getElementById('editView').style.display = 'none';
-    }
-
-    function openAccountEdit(id, eaP, diff) {
-        currentTargetId = id; 
-        currentEditingEaProfit = eaP;
-        
-        const s = accountSettings[id] || {};
-        const displayName = s.name ? s.name : id;
-        
-        document.getElementById('editTargetName').innerText = displayName;
-        document.getElementById('editTargetInfo').innerText = "EA Auto Data: " + Math.floor(eaP).toLocaleString() + " JPY";
-        document.getElementById('manualProfitInput').value = Math.floor(eaP + diff);
-        
-        document.getElementById('breakdownList').style.display = 'none'; 
-        document.getElementById('editView').style.display = 'block';
-    }
-
-    async function saveManualProfit() {
-        const inputVal = parseFloat(document.getElementById('manualProfitInput').value);
-        
-        const dateParts = currentEditingDate.split('.');
-        const safeDate = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`;
-        const safeKey = `${safeDate}_${currentTargetId}`;
-        
-        if (isNaN(inputVal)) { alert("Please enter a valid number"); return; }
-
-        const diff = inputVal - currentEditingEaProfit;
-        
-        const saveBtn = event.target;
-        const orgText = saveBtn.innerText;
-        saveBtn.innerText = "...";
-
-        try {
-            if (inputVal === Math.floor(currentEditingEaProfit)) { 
-                await fetch(`${BASE_URL}/manual_history/${safeKey}.json`, { method: 'DELETE' });
-                delete manualData[safeKey];
-            } else { 
-                await fetch(`${BASE_URL}/manual_history/${safeKey}.json`, { 
-                    method: 'PUT',
-                    body: JSON.stringify(diff)
-                });
-                manualData[safeKey] = diff; 
-            }
-            
-            const flash = document.getElementById('update-flash');
-            flash.style.opacity = '1';
-            setTimeout(() => { flash.style.opacity = '0'; }, 300);
-            
-            updateUI(); 
-            openDetailModal( parseInt(dateParts[0]), parseInt(dateParts[1]), parseInt(dateParts[2]) );
-            
-        } catch(e) {
-            console.error(e);
-            alert("Save failed");
-        } finally {
-            saveBtn.innerText = orgText;
         }
-    }
 
-    function resetToAuto() { document.getElementById('manualProfitInput').value = Math.floor(currentEditingEaProfit); }
-    function cancelEdit() { document.getElementById('editView').style.display = 'none'; document.getElementById('breakdownList').style.display = 'block'; }
-    function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
-
-    function openSettings() {
-        const container = document.getElementById('idListContainer'); container.innerHTML = "";
-        
-        allAccountIds.forEach(id => {
-            const d = accountsData[id];
-            const typeLabel = d.account_type || "Real"; 
-            
-            if (d && typeLabel === currentViewType) {
-                const s = accountSettings[id] || {name:"", isHidden:false};
-                const typeClass = typeLabel === "Demo" ? "badge-demo" : "badge-real";
-                const manLabel = s.isManual ? '<span style="font-size:9px; background:var(--accent-orange); color:white; padding:1px 4px; border-radius:3px; margin-left:4px;">MANUAL</span>' : '';
-
-                const theme = document.documentElement.getAttribute('data-theme');
-                const isHidden = s.isHidden;
-                const iconSvg = isHidden ? eyeSlashSvg : eyeOpenSvg;
-                let showBtnBg = isHidden ? (theme==='muffin'||theme==='usa-pop'?'var(--bg-dark)':'#444') : 'var(--accent-blue)';
-                let showBtnColor = isHidden ? 'var(--text-dim)' : 'white';
-
-                container.innerHTML += `
-                    <div class="setting-card card-style" style="padding:10px;">
-                        <div style="font-size:10px; color:var(--text-dim); margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="display:flex; align-items:center; font-family:monospace;">ID: ${id} <span class="badge ${typeClass}">${typeLabel}</span> ${manLabel}</span>
-                            
-                        </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <input id="n_${id}" value="${s.name || ''}" placeholder="Name" class="simple-input" style="height:32px;font-size:13px;text-align:left;padding-left:8px;margin-bottom:0;">
-                            <button class="icon-btn btn-delete" style="width:34px;height:34px;" onclick="deleteAccountSettings('${id}')">${trashSvg}</button>
-                            <button onclick="toggleVisibility('${id}')" id="vis_${id}" class="icon-btn" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; background:${showBtnBg}; color:${showBtnColor}; border:none; border-radius:4px;">
-                                ${iconSvg}
-                            </button>
-                            <input type="hidden" id="h_${id}" value="${isHidden?'1':'0'}">
-                        </div>
-                    </div>`;
-            }
-        });
-        
-        const currentTheme = localStorage.getItem('theme') || 'cyber';
-        updateActiveThemeBtn(currentTheme);
-        document.getElementById('settingsModal').style.display = 'flex';
-    }
-
-    function toggleVisibility(id) {
-        const h = document.getElementById(`h_${id}`), b = document.getElementById(`vis_${id}`);
-        const theme = document.documentElement.getAttribute('data-theme');
-        
-        if(h.value === "1") { 
-            h.value = "0"; 
-            b.innerHTML = eyeOpenSvg;
-            b.style.background = "var(--accent-blue)"; 
-            b.style.color = "white"; 
-        } else { 
-            h.value = "1"; 
-            b.innerHTML = eyeSlashSvg;
-            b.style.background = (theme==='muffin'||theme==='usa-pop') ? 'var(--bg-dark)' : '#444'; 
-            b.style.color = "var(--text-dim)"; 
+        function getDailyProfit(id, dateStr) {
+            if (!accountsData[id]) return 0;
+            return accountsData[id].history
+                .filter(h => h.close_time.startsWith(dateStr))
+                .reduce((sum, h) => sum + h.profit, 0);
         }
-    }
 
-    async function deleteRemoteSettings(id) {
-        if(confirm('Delete account settings for: ' + id + '?')) { 
-            await fetch(`${BASE_URL}/settings/${id}.json`, { method: 'DELETE' });
-            delete accountSettings[id];
-            
-            if(accountsData[id] && accountsData[id].isManual) {
-                delete accountsData[id];
-                allAccountIds = allAccountIds.filter(aid => aid !== id);
+        function createCell(day, amount) {
+            const div = document.createElement('div');
+            div.className = 'day-cell';
+            if (!day) return div;
+
+            div.innerHTML = `<div class="day-header">${day}</div>`;
+            if (amount !== undefined && amount !== 0) {
+                const colorClass = amount >= 0 ? 'profit-positive' : 'profit-negative';
+                div.innerHTML += `<span class="daily-total ${colorClass}">${amount.toLocaleString()}</span>`;
             }
-            openSettings(); 
+            return div;
         }
-    }
 
-    function changeTheme(themeName) {
-        document.documentElement.setAttribute('data-theme', themeName);
-        localStorage.setItem('theme', themeName);
-        updateActiveThemeBtn(themeName);
-        updateUI();
-    }
-
-    function updateActiveThemeBtn(themeName) {
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.classList.contains(`t-${themeName}`));
-        });
-    }
-
-async function saveAndClose() {
-    // 念のため、データがあるか確認
-    if (allAccountIds.length === 0) {
-        alert("アカウントIDが見つかりません。まずはデータを読み込んでください。");
-        closeSettings();
-        return;
-    }
-
-    // 画面の入力を吸い上げる
-    allAccountIds.forEach(id => {
-        const nameInput = document.getElementById(`name-${id}`);
-        const hideInput = document.getElementById(`hide-${id}`);
-        
-        // 入力欄が見つかった場合だけ保存する
-        if (nameInput && hideInput) {
-            accountSettings[id] = {
-                name: nameInput.value || id, // 空ならIDをそのまま名前に
-                isHidden: hideInput.checked
-            };
-        }
-    });
-
-    try {
-        const response = await fetch(BASE_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: accountSettings })
-        });
-
-        const resultText = await response.text();
-
-        if (response.ok) {
-            // Skippedなら「変更なし」、Savedなら「保存完了」
-            if (resultText.includes("Skipped")) {
-                 alert("変更項目が検出されませんでした（保存するデータがありません）");
-            } else {
-                 alert("サーバー保存完了！: " + resultText);
-            }
-            closeSettings();
+        function changeMonth(step) {
+            currentMonth += step;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
             updateUI();
-        } else {
-            alert("エラー: " + resultText);
         }
-    } catch (e) {
-        alert("通信エラー: " + e.message);
-    }
-}
-    
-    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-    function changeMonth(v) { displayDate.setMonth(displayDate.getMonth() + v); updateUI(); }
-    init();
-</script>
+
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'flex';
+            updateDropdown(); // 開くたびに最新の状態を描画
+        }
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+    </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
