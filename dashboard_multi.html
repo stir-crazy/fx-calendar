@@ -901,7 +901,7 @@ async function fetchAllData() {
     }
 
 async function saveAndClose() {
-    // 1. 画面上の入力内容を JavaScript の変数（accountSettings）に反映
+    // 1. 入力内容を一時保存
     allAccountIds.forEach(id => {
         const nameInput = document.getElementById(`name-${id}`);
         const hideInput = document.getElementById(`hide-${id}`);
@@ -913,24 +913,25 @@ async function saveAndClose() {
         }
     });
 
-    // 2. 【重要】Workers（D1）に設定データを送りつける
+    // 2. Workers(D1)に設定を送信
     try {
+        console.log("Saving settings to Workers...", accountSettings);
         const response = await fetch(BASE_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: accountSettings }) // 名前データを送信
+            body: JSON.stringify({ settings: accountSettings })
         });
 
-        if (response.ok) {
-            alert("サーバーに名前を保存しました！他のブラウザにも反映されます。");
-        } else {
-            throw new Error("保存失敗");
+        if (!response.ok) {
+            throw new Error('Save failed');
         }
+        console.log("Settings saved successfully!");
     } catch (e) {
-        console.error("Settings save error:", e);
-        alert("サーバーへの保存に失敗しました。Workersの設定を確認してください。");
+        console.error("Save error:", e);
+        // エラーが出ても画面は更新できるようにする
     }
 
+    // 3. 画面を閉じて表示を更新
     closeSettings();
     updateUI();
 }
@@ -942,6 +943,7 @@ async function saveAndClose() {
 </body>
 
 </html>
+
 
 
 
