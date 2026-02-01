@@ -78,214 +78,180 @@
         </div>
     </div>
 
-    <script>
-        // ★★★ ここをあなたのWorkersのURLに書き換えてください ★★★
-        const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
-        // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+<script>
+    // ★★★ ここをあなたのWorkersのURLに書き換えてください ★★★
+    const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
 
-        let currentYear = new Date().getFullYear();
-        let currentMonth = new Date().getMonth();
-        let accountsData = {};
-        let allAccountIds = [];
-        let accountSettings = {}; 
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth();
+    let accountsData = {};
+    let allAccountIds = [];
+    let accountSettings = {}; 
 
-        // 1. 起動時にデータを読み込む
-        window.onload = function() {
-            fetchAllData();
-        };
+    // 1. 起動時にデータを読み込む
+    window.onload = function() {
+        fetchAllData();
+    };
 
-        // 2. データ取得と整理
-        async function fetchAllData() {
-            try {
-                const res = await fetch(BASE_URL);
-                const data = await res.json();
-                
-                // 箱からデータを取り出す
-                const profits = data.profits || data || []; // 古い形式にも対応
-                const settings = data.settings || [];
-
-                accountsData = {};
-                allAccountIds = [];
-                
-                // 設定を反映
-                settings.forEach(s => {
-                    accountSettings[s.account_id] = {
-                        name: s.name,
-                        isHidden: s.is_hidden === 1
-                    };
-                });
-
-                // 利益データを整理
-                profits.forEach(item => {
-                    const id = item.account_id;
-                    if (!accountsData[id]) {
-                        accountsData[id] = { balance: 0, history: [] };
-                        allAccountIds.push(id);
-                    }
-                    if (item.timestamp.startsWith("9999")) {
-                        accountsData[id].balance = Number(item.amount);
-                    } else {
-                        accountsData[id].history.push({
-                            profit: Number(item.amount),
-                            close_time: item.timestamp.replace(/-/g, '.')
-                        });
-                    }
-                });
-
-                updateDropdown();
-                updateUI();
-            } catch (e) {
-                console.error("Load Error:", e);
-                alert("データの読み込みに失敗しました。URLを確認してください。");
-            }
-        }
-
-        // 3. 設定画面を作る（IDを確実につける）
-        function updateDropdown() {
-            const select = document.getElementById('account-select');
-            const container = document.getElementById('settings-container');
+    // 2. データ取得
+    async function fetchAllData() {
+        try {
+            const res = await fetch(BASE_URL);
+            const data = await res.json();
             
-            // プルダウン更新
-            select.innerHTML = '<option value="all">全口座合計</option>';
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || {};
-                if (!s.isHidden) {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = s.name || id;
-                    select.appendChild(option);
+            const profits = data.profits || data || [];
+            const settings = data.settings || [];
+
+            accountsData = {};
+            allAccountIds = [];
+            
+            // 設定を反映
+            settings.forEach(s => {
+                accountSettings[s.account_id] = {
+                    name: s.name,
+                    isHidden: s.is_hidden === 1
+                };
+            });
+
+            // 利益データを整理
+            profits.forEach(item => {
+                const id = item.account_id;
+                if (!accountsData[id]) {
+                    accountsData[id] = { balance: 0, history: [] };
+                    allAccountIds.push(id);
                 }
-            });
-
-            // 設定画面の中身更新
-            container.innerHTML = '';
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || { name: '', isHidden: false };
-                const div = document.createElement('div');
-                div.className = 'setting-item';
-                div.innerHTML = `
-                    <label>ID: ${id}</label>
-                    <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="表示名">
-                    <label style="display:block; margin-top:5px;">
-                        <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> 一覧から隠す
-                    </label>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // 4. 設定を保存する（IDを確実に読み取る）
-        async function saveAndClose() {
-            allAccountIds.forEach(id => {
-                const nameInput = document.getElementById(`name-${id}`);
-                const hideInput = document.getElementById(`hide-${id}`);
-                if (nameInput) {
-                    accountSettings[id] = {
-                        name: nameInput.value || id,
-                        isHidden: hideInput.checked
-                    };
-                }
-            });
-
-            try {
-                const response = await fetch(BASE_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ settings: accountSettings })
-                });
-                
-                const txt = await response.text();
-                if (response.ok) {
-                    if (txt.includes("Skipped")) {
-                        // データはあるけど変更がない場合など
-                        alert("変更データが空でした。画面を再読み込みしてリトライしてください。");
-                    } else {
-                        alert("✅ サーバーに保存しました！: " + txt);
-                    }
-                    closeSettings();
-                    // 再読み込みして最新状態にする
-                    location.reload(); 
+                if (item.timestamp.startsWith("9999")) {
+                    accountsData[id].balance = Number(item.amount);
                 } else {
-                    alert("保存エラー: " + txt);
-                }
-            } catch (e) {
-                alert("通信エラー: " + e.message);
-            }
-        }
-
-        // --- 以下、カレンダー表示ロジック ---
-        function updateUI() {
-            const calendar = document.getElementById('calendar');
-            calendar.innerHTML = '';
-            
-            const selectedId = document.getElementById('account-select').value;
-            const year = currentYear;
-            const month = currentMonth;
-
-            document.getElementById('current-month-label').textContent = `${year}年 ${month + 1}月`;
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            // 空白セル
-            for (let i = 0; i < firstDay; i++) {
-                calendar.appendChild(createCell(''));
-            }
-
-            // 日付セル
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-                let total = 0;
-
-                if (selectedId === 'all') {
-                    allAccountIds.forEach(id => {
-                        const s = accountSettings[id] || {};
-                        if (!s.isHidden) {
-                            total += getDailyProfit(id, dateStr);
-                        }
+                    accountsData[id].history.push({
+                        profit: Number(item.amount),
+                        close_time: item.timestamp.replace(/-/g, '.')
                     });
-                } else {
-                    total = getDailyProfit(selectedId, dateStr);
                 }
+            });
 
-                calendar.appendChild(createCell(d, total));
-            }
-        }
-
-        function getDailyProfit(id, dateStr) {
-            if (!accountsData[id]) return 0;
-            return accountsData[id].history
-                .filter(h => h.close_time.startsWith(dateStr))
-                .reduce((sum, h) => sum + h.profit, 0);
-        }
-
-        function createCell(day, amount) {
-            const div = document.createElement('div');
-            div.className = 'day-cell';
-            if (!day) return div;
-
-            div.innerHTML = `<div class="day-header">${day}</div>`;
-            if (amount !== undefined && amount !== 0) {
-                const colorClass = amount >= 0 ? 'profit-positive' : 'profit-negative';
-                div.innerHTML += `<span class="daily-total ${colorClass}">${amount.toLocaleString()}</span>`;
-            }
-            return div;
-        }
-
-        function changeMonth(step) {
-            currentMonth += step;
-            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            // もし古いHTMLにこの関数があれば実行、なければスキップ
+            if (typeof updateDropdown === "function") updateDropdown();
             updateUI();
+        } catch (e) {
+            console.error("Load Error:", e);
+        }
+    }
+
+    // 3. 設定保存機能（HTML側のIDに関わらず動作するように調整済み）
+    async function saveAndClose() {
+        // 画面上の入力欄を探してデータを吸い上げる
+        allAccountIds.forEach(id => {
+            const nameInput = document.getElementById(`name-${id}`);
+            const hideInput = document.getElementById(`hide-${id}`);
+            if (nameInput) {
+                accountSettings[id] = {
+                    name: nameInput.value || id,
+                    isHidden: hideInput ? hideInput.checked : false
+                };
+            }
+        });
+
+        try {
+            const response = await fetch(BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ settings: accountSettings })
+            });
+            
+            const txt = await response.text();
+            if (response.ok) {
+                if (!txt.includes("Skipped")) {
+                    alert("✅ サーバーに保存しました！");
+                }
+                // 設定画面を閉じる関数があれば呼ぶ
+                if (typeof closeSettings === "function") closeSettings();
+                location.reload(); 
+            } else {
+                alert("保存エラー: " + txt);
+            }
+        } catch (e) {
+            alert("通信エラー: " + e.message);
+        }
+    }
+
+    // --- カレンダー表示ロジック（古いHTMLと互換性を持たせる） ---
+    function updateUI() {
+        const calendar = document.getElementById('calendar');
+        if (!calendar) return; // カレンダー要素がなければ何もしない
+        
+        calendar.innerHTML = '';
+        
+        // プルダウンがあれば選択値を取得、なければ'all'
+        const select = document.getElementById('account-select');
+        const selectedId = select ? select.value : 'all';
+        
+        const year = currentYear;
+        const month = currentMonth;
+
+        const label = document.getElementById('current-month-label');
+        if (label) label.textContent = `${year}年 ${month + 1}月`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // 空白セル
+        for (let i = 0; i < firstDay; i++) {
+            calendar.appendChild(createCell(''));
         }
 
-        function openSettings() {
-            document.getElementById('settings-modal').style.display = 'flex';
-            updateDropdown(); // 開くたびに最新の状態を描画
+        // 日付セル
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+            let total = 0;
+
+            if (selectedId === 'all') {
+                allAccountIds.forEach(id => {
+                    const s = accountSettings[id] || {};
+                    if (!s.isHidden) {
+                        total += getDailyProfit(id, dateStr);
+                    }
+                });
+            } else {
+                total = getDailyProfit(selectedId, dateStr);
+            }
+
+            calendar.appendChild(createCell(d, total));
         }
-        function closeSettings() {
-            document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function getDailyProfit(id, dateStr) {
+        if (!accountsData[id]) return 0;
+        return accountsData[id].history
+            .filter(h => h.close_time.startsWith(dateStr))
+            .reduce((sum, h) => sum + h.profit, 0);
+    }
+
+    function createCell(day, amount) {
+        const div = document.createElement('div');
+        div.className = 'day-cell';
+        if (!day) return div;
+
+        div.innerHTML = `<div class="day-header">${day}</div>`;
+        
+        // スタイルクラス名は古いHTMLに合わせる必要があるかもですが、一旦標準的なもので
+        if (amount !== undefined && amount !== 0) {
+            const colorClass = amount >= 0 ? 'profit-positive' : 'profit-negative';
+            // 色がつかない場合は、古いCSSに 'profit-positive' がない可能性があります
+            // その場合は style タグを直接埋め込む
+            const colorStyle = amount >= 0 ? 'color:#28a745;' : 'color:#dc3545;';
+            div.innerHTML += `<span class="daily-total ${colorClass}" style="${colorStyle} font-weight:bold;">${amount.toLocaleString()}</span>`;
         }
-    </script>
+        return div;
+    }
+
+    function changeMonth(step) {
+        currentMonth += step;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        updateUI();
+    }
+</script>
 </body>
 </html>
+
