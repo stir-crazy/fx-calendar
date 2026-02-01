@@ -130,7 +130,7 @@
                 }
             });
 
-            // もし古いHTMLにこの関数があれば実行、なければスキップ
+            // 設定画面の準備（関数があるかチェックしてから実行）
             if (typeof updateDropdown === "function") updateDropdown();
             updateUI();
         } catch (e) {
@@ -138,9 +138,8 @@
         }
     }
 
-    // 3. 設定保存機能（HTML側のIDに関わらず動作するように調整済み）
+    // 3. 設定保存機能
     async function saveAndClose() {
-        // 画面上の入力欄を探してデータを吸い上げる
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
             const hideInput = document.getElementById(`hide-${id}`);
@@ -164,8 +163,7 @@
                 if (!txt.includes("Skipped")) {
                     alert("✅ サーバーに保存しました！");
                 }
-                // 設定画面を閉じる関数があれば呼ぶ
-                if (typeof closeSettings === "function") closeSettings();
+                closeSettings();
                 location.reload(); 
             } else {
                 alert("保存エラー: " + txt);
@@ -175,14 +173,56 @@
         }
     }
 
-    // --- カレンダー表示ロジック（古いHTMLと互換性を持たせる） ---
+    // --- 設定画面の表示機能（これが抜けていました！） ---
+    function openSettings() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.style.display = 'flex'; // または 'block' (CSSに合わせて)
+            updateDropdown();
+        } else {
+            alert("設定画面のHTMLが見つかりません。デザインを戻す際に消えてしまった可能性があります。");
+        }
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function updateDropdown() {
+        const container = document.getElementById('settings-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+        if (allAccountIds.length === 0) {
+            container.innerHTML = '<p>データが読み込まれていません</p>';
+        } else {
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || { name: '', isHidden: false };
+                const div = document.createElement('div');
+                // ↓デザイン崩れ防止のためシンプルなスタイルを適用
+                div.style.marginBottom = "10px";
+                div.style.borderBottom = "1px solid #ccc";
+                div.style.paddingBottom = "5px";
+                div.innerHTML = `
+                    <div style="font-weight:bold; font-size:0.9em;">ID: ${id}</div>
+                    <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="表示名" style="width:100%; padding:5px; margin:5px 0;">
+                    <label>
+                        <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> 一覧から隠す
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+    }
+
+    // --- カレンダー表示ロジック ---
     function updateUI() {
         const calendar = document.getElementById('calendar');
-        if (!calendar) return; // カレンダー要素がなければ何もしない
+        if (!calendar) return;
         
         calendar.innerHTML = '';
         
-        // プルダウンがあれば選択値を取得、なければ'all'
         const select = document.getElementById('account-select');
         const selectedId = select ? select.value : 'all';
         
@@ -195,12 +235,10 @@
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        // 空白セル
         for (let i = 0; i < firstDay; i++) {
             calendar.appendChild(createCell(''));
         }
 
-        // 日付セル
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}.${String(month + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
             let total = 0;
@@ -208,15 +246,24 @@
             if (selectedId === 'all') {
                 allAccountIds.forEach(id => {
                     const s = accountSettings[id] || {};
-                    if (!s.isHidden) {
-                        total += getDailyProfit(id, dateStr);
-                    }
+                    if (!s.isHidden) total += getDailyProfit(id, dateStr);
                 });
             } else {
                 total = getDailyProfit(selectedId, dateStr);
             }
 
             calendar.appendChild(createCell(d, total));
+        }
+        
+        // プルダウンの更新もここで行う
+        if (select && select.options.length <= 1 && allAccountIds.length > 0) {
+             // 初回のみ選択肢を作る（簡易的な処理）
+             allAccountIds.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id; // 名前データがまだない場合はID
+                select.appendChild(option);
+            });
         }
     }
 
@@ -233,14 +280,9 @@
         if (!day) return div;
 
         div.innerHTML = `<div class="day-header">${day}</div>`;
-        
-        // スタイルクラス名は古いHTMLに合わせる必要があるかもですが、一旦標準的なもので
         if (amount !== undefined && amount !== 0) {
-            const colorClass = amount >= 0 ? 'profit-positive' : 'profit-negative';
-            // 色がつかない場合は、古いCSSに 'profit-positive' がない可能性があります
-            // その場合は style タグを直接埋め込む
             const colorStyle = amount >= 0 ? 'color:#28a745;' : 'color:#dc3545;';
-            div.innerHTML += `<span class="daily-total ${colorClass}" style="${colorStyle} font-weight:bold;">${amount.toLocaleString()}</span>`;
+            div.innerHTML += `<span style="${colorStyle} font-weight:bold; display:block;">${amount.toLocaleString()}</span>`;
         }
         return div;
     }
@@ -251,70 +293,9 @@
         if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         updateUI();
     }
-// --- 【追加】設定画面を開く・閉じる・作る機能 ---
-    
-    function openSettings() {
-        const modal = document.getElementById('settings-modal');
-        if (modal) {
-            modal.style.display = 'flex';
-            updateDropdown(); // 開くときに最新の入力欄を作る
-        }
-    }
-
-    function closeSettings() {
-        const modal = document.getElementById('settings-modal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    function updateDropdown() {
-        const container = document.getElementById('settings-container');
-        if (!container) return;
-
-        // 設定画面の中身をリセットして作り直す
-        container.innerHTML = '';
-        
-        if (allAccountIds.length === 0) {
-            container.innerHTML = '<p>データが読み込まれていません</p>';
-        } else {
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || { name: '', isHidden: false };
-                const div = document.createElement('div');
-                div.className = 'setting-item';
-                div.innerHTML = `
-                    <label>ID: ${id}</label>
-                    <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="表示名">
-                    <label style="display:block; margin-top:5px;">
-                        <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> 一覧から隠す
-                    </label>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // ついでに画面上部のプルダウン（口座選択）も更新する
-        const select = document.getElementById('account-select');
-        if (select) {
-            const currentVal = select.value; // 今選んでいるものを覚えておく
-            select.innerHTML = '<option value="all">全口座合計</option>';
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || {};
-                if (!s.isHidden) {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = s.name || id;
-                    select.appendChild(option);
-                }
-            });
-            // もし選んでいた口座がまだあれば、選択状態を戻す
-            if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
-                select.value = currentVal;
-            }
-        }
-    }
 </script>
 </body>
 </html>
+
 
 
