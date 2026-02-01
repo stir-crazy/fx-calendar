@@ -7,47 +7,15 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 頂いたCSSをそのまま維持 */
-.padded-section, 
-.stats-container, 
-.details-container, 
-.global-footer { width: 100%; margin: 0 auto 20px; }
+/* あなたの元のCSSスタイルを維持 */
+.padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    width: 100%;
-    gap: 0 !important;
-    border-top: 1px solid var(--border);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    box-sizing: border-box;
-}
-.cell {
-    aspect-ratio: 0.9;
-    background: var(--card-bg);
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start; 
-    padding: 5px;
-    overflow: hidden;
-    position: relative;
-}
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
+.cell { aspect-ratio: 0.9; background: var(--card-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; position: relative;}
 .cell:nth-child(7n) { border-right: none; }
-.cell-date { font-size: 10px; color: var(--text-dim); align-self: flex-start; margin-bottom: 2px; }
-.cell-value {
-    font-size: 10px;
-    font-weight: bold;
-    text-align: center;
-    width: 100%;
-    line-height: 1.2;
-    word-break: break-all;
-    white-space: normal;
-    margin-top: auto; margin-bottom: auto;
-}
+.header-cell { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5px 0; }
+.header-cell:nth-child(7n) { border-right: none; }
+.cell-value { font-size: 9px; font-weight: bold; text-align: center; width: 100%; line-height: 1.1; word-break: break-all; white-space: normal; }
 #settingsModal .modal-content { width: 90%; max-width: 400px; }
 .bd-box { margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .bd-header { background: var(--bg-color); padding: 8px 10px; font-size: 11px; font-weight: bold; color: var(--text-dim); border-bottom: 1px solid var(--border); }
@@ -55,10 +23,9 @@
 .bd-row:last-child { border-bottom: none; }
 .bd-name { color: var(--text-main); font-weight: bold; }
 .bd-val { font-family: monospace; font-weight: bold; }
-
-/* 設定画面内のスタイル調整 */
-.setting-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.setting-row input[type="text"] { flex: 1; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-main); padding: 5px; border-radius: 4px; }
+/* 設定リスト用の追加スタイル */
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+.setting-row input[type="text"] { flex: 1; margin: 0 10px; padding: 5px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-main); }
 </style>
 </head>
 <body>
@@ -68,12 +35,15 @@
     <header class="global-header">
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="c-stir"><span class="c1">S</span><span class="c2">T</span><span class="c3">I</span><span class="c4">R</span></span>
-                &nbsp;
+                <span class="c-stir"><span class="c1">S</span><span class="c2">T</span><span class="c3">I</span><span class="c4">R</span></span>&nbsp;
                 <span class="c-tracker"><span class="c5">T</span><span class="c6">R</span><span class="c7">A</span><span class="c8">C</span><span class="c9">K</span><span class="c10">E</span><span class="c11">R</span></span>
             </a>
             <ul class="nav-menu">
-                <li class="nav-item"><a href="#" class="nav-icon active">📊</a></li>
+                <li class="nav-item">
+                    <a href="dashboard_multi.html" class="nav-icon active" title="Trade Canvas">
+                        <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+                    </a>
+                </li>
             </ul>
         </div>
     </header>
@@ -103,60 +73,85 @@
 
     <div class="padded-section">
         
+        <div id="monthlyBreakdownContainer" class="bd-box" style="display:none;">
+            <div class="bd-header">MONTHLY BREAKDOWN</div>
+            <div id="monthlyBreakdownList"></div>
+        </div>
+
         <div class="stats-container">
             <div class="stat-panel card-style">
                 <span style="font-size:9px; color:var(--text-dim); margin-bottom:5px;">MONTHLY PROFIT</span>
                 <div><span class="main-val" id="totalProfit">+0</span><span style="font-size:10px; color:var(--text-dim);"> JPY</span></div>
+                <div class="sub-val-box"><div class="sub-val" id="subProfit"></div></div>
             </div>
             <div class="stat-panel card-style">
-                <span style="font-size:9px; color:var(--text-dim); margin-bottom:5px;">TOTAL BALANCE</span>
-                <div><span class="main-val" id="totalBalance" style="color:#ffd700;">0</span></div>
+                <span style="font-size:9px; color:var(--text-dim); margin-bottom:5px;">MONTHLY GAIN</span>
+                <div><span class="main-val" id="monthlyGain" style="color:var(--accent-green);">-- %</span></div>
+                <div class="sub-val-box"><div class="sub-val" id="monthlyGainSub"></div></div>
+            </div>
+        </div>
+
+        <div class="details-container total-stats-section">
+            <div class="section-header" id="statsTitle">TOTAL PORTFOLIO STATISTICS</div>
+            <div class="total-stats-grid">
+                <div class="ts-card card-style">
+                    <div class="ts-label">TOTAL PROFIT (All Time)</div>
+                    <div class="ts-value" id="totalProfitAllTime">+0 </div><span style="font-size:10px; color:var(--text-dim);"> JPY</span>
+                </div>
+                <div class="ts-card full-width card-style">
+                    <div class="ts-label">TOTAL BALANCE</div>
+                    <div class="ts-value" id="totalBalance" style="color:#ffd700;">0 </div><span style="font-size:10px; color:var(--text-dim);"> JPY</span>
+                </div>
             </div>
         </div>
 
         <footer class="global-footer">
             Last Update: <span id="lastTime">--:--:--</span><br>
-            &copy; 2026 STIR CRAZY.
+            &copy; 2026 STIR CRAZY. All rights reserved.
         </footer>
     </div>
 </div>
 
 <div class="modal-overlay" id="settingsModal" style="display:none;">
     <div class="modal-content card-style" style="max-height:85vh; overflow-y:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <span class="modal-title">Account Settings</span>
-            <button onclick="closeSettings()" style="background:none; border:none; color:var(--text-dim); font-size:18px; cursor:pointer;">✕</button>
+        <button class="close-modal-btn" onclick="closeSettings()" style="float:right; background:none; border:none; font-size:18px; color:var(--text-dim);">✕</button>
+        <span class="modal-title">Account Settings</span>
+        
+        <div style="text-align:center; margin:15px 0; font-size:11px; color:var(--text-dim); font-weight:bold;">DESIGN THEME</div>
+        <div class="theme-selector" style="display:flex; justify-content:center; gap:5px; margin-bottom:15px;">
+            <button class="theme-btn t-cyber" onclick="changeTheme('cyber')" style="width:20px; height:20px; background:#0f1923; border:1px solid #ccc;"></button>
+            <button class="theme-btn t-light" onclick="changeTheme('light')" style="width:20px; height:20px; background:#fff; border:1px solid #ccc;"></button>
+            <button class="theme-btn t-midnight" onclick="changeTheme('midnight')" style="width:20px; height:20px; background:#191970; border:1px solid #ccc;"></button>
         </div>
+
+        <div style="font-size:11px; color:var(--text-dim); font-weight:bold; margin-bottom:10px;">EXISTING ACCOUNTS</div>
+        <div id="idListContainer" style="max-height:250px; overflow-y:auto; padding-right:5px; margin-bottom:20px;"></div>
         
-        <div style="font-size:11px; color:var(--text-dim); font-weight:bold; margin-bottom:10px;">NAME SETTINGS</div>
-        <div id="idListContainer" style="max-height:300px; overflow-y:auto; padding-right:5px; margin-bottom:20px;">
-            </div>
-        
-        <button style="width:100%; padding:14px; background:var(--accent-blue); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.2);" onclick="saveAndClose()">Apply Settings</button>
+        <button style="width:100%; padding:14px; background:var(--accent-blue); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;" onclick="saveAndClose()">Apply Settings</button>
     </div>
 </div>
 
 <script>
-    // ★★★ ↓↓ WorkersのURLに書き換えてください ↓↓ ★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ↓↓ ここをあなたのWorkersのURLに書き換えてください！ ↓↓
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
     let accountsData = {};
     let allAccountIds = [];
     let accountSettings = {}; 
-    let currentType = 'Real'; // Real or Demo
+    let currentType = 'Real';
 
-    // 1. 起動時に実行
     window.onload = function() {
-        // テーマの復元（保存されていれば）
+        // テーマの復元
         const savedTheme = localStorage.getItem('selected_theme');
         if (savedTheme) changeTheme(savedTheme);
         fetchAllData();
     };
 
-    // 2. データ取得
+    // Workersからデータを取得
     async function fetchAllData() {
         try {
             const res = await fetch(BASE_URL);
@@ -168,15 +163,10 @@
             accountsData = {};
             allAccountIds = [];
             
-            // 設定反映
             settings.forEach(s => {
-                accountSettings[s.account_id] = {
-                    name: s.name,
-                    isHidden: s.is_hidden === 1
-                };
+                accountSettings[s.account_id] = { name: s.name, isHidden: s.is_hidden === 1 };
             });
 
-            // 利益データ整理
             profits.forEach(item => {
                 const id = item.account_id;
                 if (!accountsData[id]) {
@@ -195,20 +185,18 @@
 
             document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
             updateDropdown();
-            updateUI(); // カレンダー更新
-            updateStats(); // ★追加：統計とBreakdown更新
+            updateUI();
+            updateStats(); // ← これが消えていたので復活させました！
 
         } catch (e) {
             console.error(e);
-            alert("データ読み込みエラー");
+            alert("データ読み込みエラー: URLを確認してください");
         }
     }
 
-    // 3. 画面全体（カレンダー・合計）の更新
+    // 画面更新
     function updateUI() {
-        // 日付表示
         document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
-
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
 
@@ -218,17 +206,15 @@
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-        // 空白セル
         for (let i = 0; i < firstDay; i++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
-            cell.style.background = 'transparent';
+            cell.style.background = 'transparent'; // 空白
             grid.appendChild(cell);
         }
 
         let monthlyTotal = 0;
 
-        // 日付セル
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
             let dailyTotal = 0;
@@ -246,74 +232,86 @@
             grid.appendChild(createCell(d, dailyTotal));
         }
 
-        // 月次合計表示
+        // 月次合計
         const profitEl = document.getElementById('totalProfit');
-        profitEl.textContent = (monthlyTotal > 0 ? "+" : "") + monthlyTotal.toLocaleString();
-        profitEl.style.color = monthlyTotal >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        if(profitEl) {
+            profitEl.textContent = (monthlyTotal > 0 ? "+" : "") + monthlyTotal.toLocaleString();
+            profitEl.style.color = monthlyTotal >= 0 ? 'var(--accent-green, #28a745)' : 'var(--accent-red, #dc3545)';
+        }
         
-        // Breakdownなども更新
+        // 統計情報の更新呼び出し
         updateStats();
     }
 
-    // ★追加機能：統計と詳細リスト（Breakdown）の表示
+    // ★重要：詳細リストと統計の更新機能★
     function updateStats() {
-        // 1. 全残高の計算
         let totalBal = 0;
-        let totalProfitAll = 0; // 全期間利益（簡易）
-
-        // 2. Breakdownリストの作成
+        let totalProfitAll = 0;
+        
         const breakdownList = document.getElementById('monthlyBreakdownList');
         const breakdownContainer = document.getElementById('monthlyBreakdownContainer');
         
-        if (breakdownList) {
-            breakdownList.innerHTML = '';
-            let hasData = false;
+        // Breakdownリストのリセット
+        if (breakdownList) breakdownList.innerHTML = '';
+        
+        let hasData = false;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        allAccountIds.forEach(id => {
+            const s = accountSettings[id] || {};
             
-            // 現在の月のデータを口座ごとに集計
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || {};
-                if (s.isHidden) return; // 隠している口座はスキップ
-
-                // 残高加算
+            // 全期間利益の計算
+            if(accountsData[id].history) {
+                 accountsData[id].history.forEach(h => totalProfitAll += h.profit);
+            }
+            
+            // 残高の計算（非表示口座も含めるかどうかは好みですが、一旦表示口座のみ加算）
+            if (!s.isHidden) {
                 totalBal += (accountsData[id].balance || 0);
 
-                // この月の利益を計算
+                // 月次利益（Breakdown用）
                 let monthProfit = 0;
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
                     monthProfit += getDailyProfit(id, dateStr);
                 }
 
-                // リストに行を追加
-                const row = document.createElement('div');
-                row.className = 'bd-row';
-                row.innerHTML = `
-                    <span class="bd-name">${s.name || id}</span>
-                    <span class="bd-val" style="color:${monthProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
-                        ${monthProfit.toLocaleString()}
-                    </span>
-                `;
-                breakdownList.appendChild(row);
-                hasData = true;
-            });
+                // リスト表示
+                if (breakdownList) {
+                    const row = document.createElement('div');
+                    row.className = 'bd-row';
+                    row.innerHTML = `
+                        <span class="bd-name">${s.name || id}</span>
+                        <span class="bd-val" style="color:${monthProfit >= 0 ? 'var(--accent-green, #28a745)' : 'var(--accent-red, #dc3545)'}">
+                            ${monthProfit.toLocaleString()}
+                        </span>
+                    `;
+                    breakdownList.appendChild(row);
+                    hasData = true;
+                }
+            }
+        });
 
-            // データがあればコンテナを表示
-            if(breakdownContainer) breakdownContainer.style.display = hasData ? 'block' : 'none';
+        // データがある場合のみ詳細リスト枠を表示
+        if(breakdownContainer) {
+            breakdownContainer.style.display = hasData ? 'block' : 'none';
         }
 
-        // 3. 画面上の統計数値更新
+        // 統計数値の更新
         const balEl = document.getElementById('totalBalance');
         if(balEl) balEl.textContent = totalBal.toLocaleString();
+
+        const allProfitEl = document.getElementById('totalProfitAllTime');
+        if(allProfitEl) allProfitEl.textContent = (totalProfitAll > 0 ? "+" : "") + totalProfitAll.toLocaleString();
     }
 
     function createCell(day, amount) {
         const div = document.createElement('div');
         div.className = 'cell';
-        div.innerHTML = `<div class="cell-date">${day}</div>`;
+        // デザイン互換のための構造
+        div.innerHTML = `<div style="font-size:10px; color:var(--text-dim); align-self:flex-start; margin-bottom:2px;">${day}</div>`;
         if (amount !== 0) {
-            const color = amount >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            const color = amount >= 0 ? 'var(--accent-green, #28a745)' : 'var(--accent-red, #dc3545)';
             div.innerHTML += `<div class="cell-value" style="color:${color}">${amount.toLocaleString()}</div>`;
         }
         return div;
@@ -326,7 +324,7 @@
             .reduce((sum, h) => sum + h.profit, 0);
     }
 
-    // --- 設定画面とドロップダウン ---
+    // 設定画面・ドロップダウン生成
     function updateDropdown() {
         const select = document.getElementById('accountSelector');
         const listContainer = document.getElementById('idListContainer');
@@ -348,9 +346,11 @@
             const row = document.createElement('div');
             row.className = 'setting-row';
             row.innerHTML = `
-                <div style="font-size:10px; color:var(--text-dim); width:60px;">${id}</div>
+                <div style="font-size:10px; color:var(--text-dim); width:60px; overflow:hidden;">${id}</div>
                 <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="Name">
-                <label style="font-size:10px;"><input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> Hide</label>
+                <label style="font-size:10px; display:flex; align-items:center;">
+                    <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> Hide
+                </label>
             `;
             listContainer.appendChild(row);
         });
@@ -358,6 +358,7 @@
         if (currentVal) select.value = currentVal;
     }
 
+    // Workersへの保存
     async function saveAndClose() {
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
@@ -377,22 +378,20 @@
                 body: JSON.stringify({ settings: accountSettings })
             });
             if (res.ok) {
-                alert("✅ Saved!");
+                alert("✅ 保存しました！");
                 closeSettings();
                 location.reload();
             } else {
-                alert("Error: " + await res.text());
+                alert("エラー: " + await res.text());
             }
         } catch (e) {
-            alert("Connection Error");
+            alert("通信エラー");
         }
     }
 
-    // --- ★復活：テーマ切り替え機能 ---
+    // テーマ変更機能
     function changeTheme(themeName) {
-        document.body.className = themeName; // bodyにクラスをつける方式と仮定
-        // もしCSSファイルの切り替えが必要なら以下のように実装
-        // document.getElementById('theme-link').href = `theme-${themeName}.css`;
+        document.body.className = themeName;
         localStorage.setItem('selected_theme', themeName);
     }
 
@@ -407,17 +406,11 @@
         currentType = type;
         document.getElementById('btnReal').classList.toggle('active', type === 'Real');
         document.getElementById('btnDemo').classList.toggle('active', type === 'Demo');
-        // 必要ならここでフィルタリングを追加
+        updateUI();
     }
 
-    function openSettings() {
-        document.getElementById('settingsModal').style.display = 'flex';
-        updateDropdown();
-    }
-    function closeSettings() {
-        document.getElementById('settingsModal').style.display = 'none';
-    }
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; updateDropdown(); }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
 </script>
 </body>
 </html>
-
