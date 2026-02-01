@@ -1,0 +1,265 @@
+       /* --- デザイン変数 (デフォルト: CYBER DARK) --- */
+        :root {
+            --bg-main: #0d0d0d;
+            --bg-card: #1e1e1e;
+            --bg-grid: #141414;
+            --bg-grid-header: #181818;
+            --border: #333;
+            --border-width: 1px;
+            --text-main: #e0e0e0;
+            --text-dim: #9ca3af;
+            --accent-blue: #0096ff;
+            --accent-green: #00e16e;
+            --accent-red: #ff4b4b;
+            --accent-orange: #ff9800;
+            --accent-darkred: #8b0000;
+            --header-bg: rgba(13, 13, 13, 0.95);
+            --btn-bg: #2a2a2a;
+            --btn-border: #444;
+            --btn-hover: #333;
+            --input-bg: #000;
+            --font-family: 'Inter', sans-serif;
+            --shadow-style: none;
+            --border-radius: 12px;
+            /* ロゴカラー初期値 */
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: SNOW LIGHT --- */
+        [data-theme="light"] {
+            --bg-main: #f4f6f8;
+            --bg-card: #ffffff;
+            --bg-grid: #ffffff;
+            --bg-grid-header: #eef2f5;
+            --border: #dbe0e5;
+            --text-main: #2c3e50;
+            --text-dim: #5f6c7b;
+            --accent-blue: #007bff;
+            --accent-green: #00a651;
+            --accent-red: #dc3545;
+            --accent-orange: #fd7e14;
+            --accent-darkred: #ffcccc;
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --btn-bg: #f8f9fa;
+            --btn-border: #ced4da;
+            --btn-hover: #e2e6ea;
+            --input-bg: #f8f9fa;
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: MIDNIGHT BLUE --- */
+        [data-theme="midnight"] {
+            --bg-main: #0b1021;
+            --bg-card: #151b33;
+            --bg-grid: #11162a;
+            --bg-grid-header: #1a223f;
+            --border: #2c3e50;
+            --text-main: #dce1eb;
+            --text-dim: #8ba2c4;
+            --accent-blue: #4dabf7;
+            --accent-green: #40c057;
+            --accent-red: #fa5252;
+            --accent-orange: #ffa94d;
+            --accent-darkred: #5c1825;
+            --header-bg: rgba(11, 16, 33, 0.95);
+            --btn-bg: #1c2545;
+            --btn-border: #2c3e50;
+            --btn-hover: #263159;
+            --input-bg: #0d1226;
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: CRAZY POP (黄色背景) --- */
+        [data-theme="crazy"] {
+            --bg-main: #FFEB3B;
+            --bg-card: #FFFFFF;
+            --bg-grid: #FFFDE7;
+            --bg-grid-header: #FF4081;
+            --border: #000000;
+            --border-width: 2px;
+            --text-main: #000000;
+            --text-dim: #424242;
+            --accent-blue: #00B0FF;
+            --accent-green: #00E676;
+            --accent-red: #FF1744;
+            --accent-orange: #FF6D00;
+            --accent-darkred: #D50000;
+            --header-bg: #D500F9;
+            --btn-bg: #FFFFFF;
+            --btn-border: #000000;
+            --btn-hover: #B2FF59;
+            --input-bg: #FFFFFF;
+            --shadow-style: 4px 4px 0px #000000;
+            --font-family: 'Arial Black', sans-serif;
+            --border-radius: 8px;
+            --logo-stir: #FFFF00;
+            --logo-tracker: #FFFFFF;
+        }
+
+        /* --- テーマ: SWEET MUFFIN (パステル) --- */
+        [data-theme="muffin"] {
+            --bg-main: #FFFCF2;
+            --bg-card: #FFFFFF;
+            --bg-grid: #FFFAFA;
+            --bg-grid-header: #FFE4E1;
+            --border: #E0C0B0;
+            --border-width: 1px;
+            --text-main: #5D4037;
+            --text-dim: #A1887F;
+            --accent-blue: #87CEEB;
+            --accent-green: #98FB98;
+            --accent-red: #FF6B6B;
+            --accent-orange: #FFB347;
+            --accent-darkred: #D35400;
+            --header-bg: rgba(255, 182, 193, 0.95);
+            --btn-bg: #FFF0F5;
+            --btn-border: #E6E6FA;
+            --btn-hover: #FFE4E1;
+            --input-bg: #FFFFFF;
+            --shadow-style: 0 8px 20px rgba(255, 182, 193, 0.3);
+            --font-family: 'Nunito', 'Rounded Mplus 1c', sans-serif;
+            --border-radius: 20px;
+            --logo-stir: #FFFFFF;
+            --logo-tracker: #FFFFFF;
+        }
+
+        /* --- テーマ: USA POP (白背景・カラフル文字) --- */
+        [data-theme="usa-pop"] {
+            --bg-main: #FFFFFF; /* 白背景 */
+            --bg-card: #FFFFFF;
+            --bg-grid: #F0F8FF;
+            --bg-grid-header: #00B0FF; /* ライムブルー */
+            --border: #00B0FF;
+            --border-width: 2px;
+            --text-main: #333333;
+            --text-dim: #666666;
+            --accent-blue: #00B0FF;
+            --accent-green: #00E676;
+            --accent-red: #FF3D00; /* ビビッドレッド */
+            --accent-orange: #FF9100;
+            --accent-darkred: #D50000;
+            --header-bg: rgba(255, 255, 255, 0.95); /* 白ヘッダー */
+            --btn-bg: #FFFFFF;
+            --btn-border: #00B0FF;
+            --btn-hover: #E1F5FE;
+            --input-bg: #FFFFFF;
+            --shadow-style: 4px 4px 0px rgba(0,0,0,0.15); /* 軽い影 */
+            --font-family: 'Arial Rounded MT Bold', 'Comic Sans MS', sans-serif;
+            --border-radius: 16px;
+            /* ロゴカラーは個別に指定するため変数は使わない */
+        }
+
+
+
+        /* --- デザイン変数 --- */
+        :root {
+            --bg-dark: #0d0d0d;
+            --card-bg: #1e1e1e;
+            --accent-blue: #0096ff;
+            --accent-green: #00e16e;
+            --accent-red: #ff4b4b;
+            --accent-darkred: #8b0000;
+            --accent-orange: #ff9800;
+            --text-main: #e0e0e0;
+            --text-dim: #9ca3af;
+            --border: #333;
+            --border-width: 1px;
+            --header-height: 60px;
+            --content-width: 420px;
+            --font-family: 'Inter', sans-serif;
+            --shadow-style: none;
+            --border-radius: 12px;
+            /* ロゴカラー初期値 */
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: SNOW LIGHT --- */
+        [data-theme="light"] {
+            --bg-dark: #f4f6f8;
+            --card-bg: #ffffff;
+            --accent-blue: #007bff;
+            --accent-green: #00a651;
+            --accent-red: #dc3545;
+            --text-main: #2c3e50;
+            --text-dim: #5f6c7b;
+            --border: #dbe0e5;
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: MIDNIGHT BLUE --- */
+        [data-theme="midnight"] {
+            --bg-dark: #0b1021;
+            --card-bg: #151b33;
+            --accent-blue: #4dabf7;
+            --accent-green: #40c057;
+            --accent-red: #fa5252;
+            --text-main: #dce1eb;
+            --text-dim: #8ba2c4;
+            --border: #2c3e50;
+            --logo-stir: var(--accent-blue);
+            --logo-tracker: var(--text-main);
+        }
+
+        /* --- テーマ: CRAZY POP (黄色背景) --- */
+        [data-theme="crazy"] {
+            --bg-dark: #FFEB3B;
+            --card-bg: #FFFFFF;
+            --border: #000000;
+            --border-width: 2px;
+            --text-main: #000000;
+            --text-dim: #424242;
+            --accent-blue: #00B0FF;
+            --accent-green: #00E676;
+            --accent-red: #FF1744;
+            --accent-orange: #FF6D00;
+            --accent-darkred: #D50000;
+            --shadow-style: 4px 4px 0px #000000;
+            --font-family: 'Arial Black', sans-serif;
+            --border-radius: 8px;
+            --logo-stir: #FFFF00;
+            --logo-tracker: #FFFFFF;
+        }
+
+        /* --- テーマ: SWEET MUFFIN --- */
+        [data-theme="muffin"] {
+            --bg-dark: #FFFCF2;
+            --card-bg: #FFFFFF;
+            --border: #E0C0B0;
+            --border-width: 1px;
+            --text-main: #5D4037;
+            --text-dim: #A1887F;
+            --accent-blue: #87CEEB;
+            --accent-green: #98FB98;
+            --accent-red: #FF6B6B;
+            --accent-orange: #FFB347;
+            --accent-darkred: #D35400;
+            --shadow-style: 0 8px 20px rgba(255, 182, 193, 0.3);
+            --font-family: 'Nunito', 'Rounded Mplus 1c', sans-serif;
+            --border-radius: 20px;
+            --logo-stir: #FFFFFF;
+            --logo-tracker: #FFFFFF;
+        }
+
+        /* --- テーマ: USA POP (白背景・カラフル文字) --- */
+        [data-theme="usa-pop"] {
+            --bg-dark: #FFFFFF; /* 白背景 */
+            --card-bg: #FFFFFF;
+            --border: #00B0FF; /* ライムブルー */
+            --border-width: 3px;
+            --text-main: #000000;
+            --text-dim: #555555;
+            --accent-blue: #00B0FF;
+            --accent-green: #00E676;
+            --accent-red: #FF3D00; /* ビビッドレッド */
+            --accent-orange: #FF9100;
+            --accent-darkred: #D50000;
+            --shadow-style: 6px 6px 0px rgba(0,0,0,0.15);
+            --font-family: 'Arial Rounded MT Bold', 'Comic Sans MS', sans-serif;
+            --border-radius: 16px;
+            /* ロゴカラーは個別に指定 */
+        }

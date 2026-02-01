@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Setup | STIR TRACKER</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+    <header class="global-header">
+        <div class="nav-container">
+            <a href="index.html" class="logo">
+                <span class="c-stir">
+                    <span class="c1">S</span><span class="c2">T</span><span class="c3">I</span><span class="c4">R</span>
+                </span>
+                &nbsp;
+                <span class="c-tracker">
+                    <span class="c5">T</span><span class="c6">R</span><span class="c7">A</span><span class="c8">C</span><span class="c9">K</span><span class="c10">E</span><span class="c11">R</span>
+                </span>
+            </a>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard_multi.html" class="nav-icon" title="Trade Canvas">
+                        <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="setup.html" class="nav-icon active" title="Sync Setup">
+                        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="https://stir-crazy.com/" target="_blank" class="nav-icon" title="Update Info">
+                        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/></svg>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="status-card card-style">
+            <div class="status-badge">
+                <div class="status-dot"></div> 
+                System Status: Online
+            </div>
+            <div>
+                <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600; letter-spacing: 0.5px;">YOUR SYNC ID</span>
+                <div class="copy-box">
+                    <span class="copy-text" id="userId">STIR-777-Hoola</span>
+                    <button class="btn-copy" onclick="copyText('userId', this)">コピー</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('mt4')">MT4/5 導入ガイド</button>
+            <button class="tab-btn" onclick="switchTab('app')">アプリ設定</button>
+        </div>
+
+        <div id="tab-mt4" class="tab-content active">
+            <div class="section-title">セットアップ手順</div>
+
+            <div class="step-card card-style">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h3>EAファイルをダウンロード</h3>
+                    <p>ご利用のプラットフォームに合わせて専用EAをダウンロードしてください。</p>
+                    <div class="dl-group">
+                        <a href="#" class="btn-dl">MT4版をDL</a>
+                        <a href="#" class="btn-dl">MT5版をDL</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card card-style">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h3>データフォルダへ配置</h3>
+                    <p>MT4/MT5の「ファイル」メニューから「データフォルダを開く」を選択し、MQL4(5) > Expertsフォルダ内にファイルをコピーしてください。</p>
+                </div>
+            </div>
+
+            <div class="step-card card-style">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h3>DLLの使用を許可</h3>
+                    <p>EA設定の「全般」タブ、またはオプションの「エキスパートアドバイザー」設定で「DLLの使用を許可する」にチェックを入れます。</p>
+                </div>
+            </div>
+
+            <div class="step-card card-style">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h3>WebリクエストURLの追加</h3>
+                    <p>オプション設定の「エキスパートアドバイザー」タブにある「WebブラウザのURLを許可する」に、以下のURLを追加してください。</p>
+                    <div class="copy-box">
+                        <span class="copy-text" id="targetUrl">https://profit-calendar-mt5.asia-southeast1.firebasedatabase.app</span>
+                        <button class="btn-copy" onclick="copyText('targetUrl', this)">コピー</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-app" class="tab-content">
+            <div class="section-title">アカウント管理</div>
+            
+            <div class="info-box card-style">
+                EAをMT4/5にセットすると、自動的にアカウント情報が読み込まれます。<br>
+                口座番号が表示されますので、ターミナルごとに分かりやすい名前やEA名に変更して管理してください。
+            </div>
+
+            <div class="card-style" style="margin-bottom: 20px; padding: 15px; border-left: 3px solid var(--accent-green);">
+                <button id="showManualFormBtn" onclick="toggleManualForm(true)" style="width:100%; padding:12px; background:transparent; border:2px dashed var(--border); color:var(--text-dim); border-radius:8px; font-weight:bold; cursor:pointer;">
+                    + Add New Manual Account
+                </button>
+
+                <div id="manualFormArea" style="display:none;">
+                    <div style="font-size:11px; color:var(--text-dim); font-weight:bold; margin-bottom:10px;">CREATE NEW ACCOUNT</div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <input id="newManualName" class="setting-input" placeholder="Account Name (e.g. HighLow)" style="margin-bottom:0;">
+                        
+                        <div style="display:flex; gap:10px;">
+                            <select id="newManualCurrency" class="setting-input" style="flex:1; margin-bottom:0;">
+                                <option value="JPY">JPY</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                            <select id="newManualType" class="setting-input" style="flex:1; margin-bottom:0;">
+                                <option value="Real">Real Account</option>
+                                <option value="Demo">Demo Account</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:10px; margin-top:5px;">
+                            <button onclick="toggleManualForm(false)" style="flex:1; padding:10px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:4px; cursor:pointer;">Cancel</button>
+                            <button onclick="addManualAccount()" style="flex:2; padding:10px; background:var(--accent-green); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Create</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="type-switch-container card-style">
+                <button class="type-btn active" id="btnRealSetup" onclick="switchAccountType('Real')">REAL ACCOUNT</button>
+                <button class="type-btn" id="btnDemoSetup" onclick="switchAccountType('Demo')">DEMO ACCOUNT</button>
+            </div>
+
+            <div id="accountListContainer">Loading accounts...</div>
+            <button onclick="saveAllSettings()" style="width:100%; padding:14px; background:var(--accent-blue); color:white; border:none; border-radius:calc(var(--border-radius) - 4px); font-weight:bold; cursor:pointer; margin-top:10px; box-shadow:var(--shadow-style);">設定を保存</button>
+
+            <div class="section-title" style="margin-top:30px;">計算オプション</div>
+            <div class="status-card card-style">
+                <div class="setting-row">
+                    <div>
+                        <h4 style="margin:0; font-size:0.9rem;">スワップを含める</h4>
+                        <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">保有コストを合算して表示します</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+                <div class="setting-row" style="border-bottom: none;">
+                    <div>
+                        <h4 style="margin:0; font-size:0.9rem;">手数料を含める</h4>
+                        <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">取引手数料を反映して表示します</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="global-footer">
+        &copy; 2026 STIR TRACKER | STIR CRAZY Project. All rights reserved.<br>
+        <a href="https://stir-crazy.com/" style="color:#555; text-decoration:none;" target="_blank">https://stir-crazy.com/</a>
+    </footer>
+
+<script>
+    const BASE_URL = "https://profit-calendar-mt5.asia-southeast1.firebasedatabase.app";
+    let allAccountIds = [], accountSettings = {}, accountsData = {};
+    let currentAccountType = 'Real';
+    const trashSvg = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+    
+    // ★ 目のアイコン定義 (Open / Slashed)
+    const eyeOpenSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+    const eyeSlashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+
+    function init() {
+        const savedTheme = localStorage.getItem('theme');
+        if(savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+        fetchAllData();
+    }
+
+    async function fetchAllData() {
+        try {
+            const [usersRes, settingsRes] = await Promise.all([
+                fetch(`${BASE_URL}/users.json`),
+                fetch(`${BASE_URL}/settings.json`)
+            ]);
+
+            const users = usersRes.ok ? (await usersRes.json() || {}) : {};
+            const settings = settingsRes.ok ? (await settingsRes.json() || {}) : {};
+
+            accountsData = users; 
+            accountSettings = settings;
+
+            allAccountIds = Object.keys(users);
+            Object.keys(settings).forEach(id => {
+                if (settings[id].isManual && !allAccountIds.includes(id)) {
+                    allAccountIds.push(id);
+                    accountsData[id] = {
+                        platform: "Manual",
+                        account_type: settings[id].account_type || "Real", 
+                        isManual: true
+                    };
+                }
+            });
+
+            renderAccountSettings();
+        } catch(e) {
+            console.error(e);
+            document.getElementById('accountListContainer').innerText = "Failed to load accounts.";
+        }
+    }
+
+    function toggleManualForm(show) {
+        document.getElementById('showManualFormBtn').style.display = show ? 'none' : 'block';
+        document.getElementById('manualFormArea').style.display = show ? 'block' : 'none';
+    }
+
+    async function addManualAccount() {
+        const name = document.getElementById('newManualName').value.trim();
+        const currency = document.getElementById('newManualCurrency').value;
+        const type = document.getElementById('newManualType').value;
+
+        if(!name) { alert("Please enter a name"); return; }
+
+        const newId = "manual_" + Date.now();
+        const newSettings = {
+            name: name,
+            isHidden: false,
+            isManual: true,
+            currency: currency,
+            account_type: type 
+        };
+
+        const btn = event.target;
+        const orgText = btn.innerText;
+        btn.innerText = "Creating...";
+
+        try {
+            await fetch(`${BASE_URL}/settings/${newId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(newSettings)
+            });
+
+            accountSettings[newId] = newSettings;
+            document.getElementById('newManualName').value = "";
+            toggleManualForm(false); 
+            
+            await fetchAllData(); 
+            
+            if (type !== currentAccountType) {
+                switchAccountType(type);
+            } else {
+                renderAccountSettings();
+            }
+
+        } catch(e) {
+            console.error(e);
+            alert("Error creating account");
+        } finally {
+            btn.innerText = orgText;
+        }
+    }
+
+    function switchAccountType(type) {
+        saveVisibleInputsToMemory();
+        currentAccountType = type;
+        document.getElementById('btnRealSetup').className = `type-btn ${type === 'Real' ? 'active' : ''}`;
+        document.getElementById('btnDemoSetup').className = `type-btn ${type === 'Demo' ? 'active' : ''}`;
+        renderAccountSettings();
+    }
+
+    function saveVisibleInputsToMemory() {
+        allAccountIds.forEach(id => {
+            const nameIn = document.getElementById(`n_${id}`);
+            const hideIn = document.getElementById(`h_${id}`);
+            if(nameIn) {
+                const existing = accountSettings[id] || {};
+                accountSettings[id] = { 
+                    ...existing,
+                    name: nameIn.value, 
+                    isHidden: hideIn.value === "1" 
+                };
+            }
+        });
+    }
+
+    function renderAccountSettings() {
+        const container = document.getElementById('accountListContainer'); 
+        container.innerHTML = "";
+        let count = 0;
+        allAccountIds.forEach(id => {
+            const d = accountsData[id];
+            const typeLabel = d.account_type || "Real"; 
+            
+            const platform = d.platform || "MT5"; 
+            const platformClass = platform === "MT4" ? "badge-mt4" : (platform === "Manual" ? "badge-manual" : "badge-mt5");
+            const manLabel = d.isManual ? '<span style="font-size:9px; background:var(--accent-orange); color:white; padding:1px 4px; border-radius:3px; margin-left:4px;">MANUAL</span>' : '';
+
+            if (d && typeLabel === currentAccountType) {
+                const s = accountSettings[id] || {name:"", isHidden:false};
+                const typeClass = typeLabel === "Demo" ? "badge-demo" : "badge-real";
+                count++;
+
+                const theme = document.documentElement.getAttribute('data-theme');
+                const isHidden = s.isHidden;
+                const iconSvg = isHidden ? eyeSlashSvg : eyeOpenSvg;
+                
+                // アイコンボタンのスタイル
+                let showBtnBg = isHidden ? (theme==='muffin'||theme==='usa-pop'?'var(--bg-dark)':'#444') : 'var(--accent-blue)';
+                let showBtnColor = isHidden ? 'var(--text-dim)' : 'white';
+
+                container.innerHTML += `
+                    <div class="account-setting-card card-style" style="padding:15px; margin-bottom:10px;">
+                        <div style="font-size:10px; color:var(--text-dim); margin-bottom:5px;">
+                            <span style="font-family:monospace;">ID: ${id}</span>
+                            <span class="badge ${typeClass}">${typeLabel}</span>
+                            <span class="badge ${platformClass}">${platform}</span> ${manLabel}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input id="n_${id}" value="${s.name || ''}" placeholder="Name" class="setting-input" style="flex:1; margin-bottom:0; height:36px;">
+                            
+                            <button onclick="toggleVisibility('${id}')" id="vis_${id}" class="icon-btn" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:${showBtnBg}; color:${showBtnColor}; border:none; border-radius:4px;">
+                                ${iconSvg}
+                            </button>
+                            <input type="hidden" id="h_${id}" value="${isHidden?'1':'0'}">
+
+                            <button onclick="deleteRemoteSettings('${id}')" class="icon-btn btn-delete" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; border:none; border-radius:4px; background:var(--btn-bg); color:var(--loss-color);">
+                                ${trashSvg}
+                            </button>
+                        </div>
+                    </div>`;
+            }
+        });
+        if(count === 0) container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-dim);">No ${currentAccountType} accounts.</div>`;
+    }
+
+    async function deleteRemoteSettings(id) {
+        if(confirm('Delete account settings for: ' + id + '?')) { 
+            await fetch(`${BASE_URL}/settings/${id}.json`, { method: 'DELETE' });
+            delete accountSettings[id];
+            
+            if(accountsData[id] && accountsData[id].isManual) {
+                delete accountsData[id];
+                allAccountIds = allAccountIds.filter(aid => aid !== id);
+            }
+            renderAccountSettings(); 
+        }
+    }
+
+    async function saveAllSettings() {
+        saveVisibleInputsToMemory();
+        const savePromises = Object.keys(accountSettings).map(id => {
+            return fetch(`${BASE_URL}/settings/${id}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(accountSettings[id])
+            });
+        });
+        try {
+            await Promise.all(savePromises);
+            alert("Settings Synchronized!");
+            location.reload(); 
+        } catch(e) {
+            alert("Save failed.");
+        }
+    }
+
+    function toggleVisibility(id) {
+        const h = document.getElementById(`h_${id}`), b = document.getElementById(`vis_${id}`);
+        if(h.value === "1") { 
+            // Hidden -> Showing (Open Eye)
+            h.value = "0"; 
+            b.innerHTML = eyeOpenSvg;
+            b.style.background = "var(--accent-blue)"; 
+            b.style.color = "white"; 
+        } else { 
+            // Showing -> Hidden (Slash Eye)
+            h.value = "1"; 
+            b.innerHTML = eyeSlashSvg;
+            const theme = document.documentElement.getAttribute('data-theme');
+            b.style.background = (theme==='muffin'||theme==='usa-pop') ? 'var(--bg-dark)' : '#444'; 
+            b.style.color = "var(--text-dim)"; 
+        }
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+
+    function copyText(id, btn) {
+        navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
+            const old = btn.innerText; btn.innerText = '完了!';
+            setTimeout(() => btn.innerText = old, 2000);
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
