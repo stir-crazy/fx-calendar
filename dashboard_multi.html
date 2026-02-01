@@ -900,26 +900,40 @@ async function fetchAllData() {
         });
     }
 
-    async function saveAndClose() {
-        const savePromises = [];
-        allAccountIds.forEach(id => {
-            const nameIn = document.getElementById(`n_${id}`);
-            const hideIn = document.getElementById(`h_${id}`);
-            if(nameIn) {
-                const existing = accountSettings[id] || {};
-                accountSettings[id] = { ...existing, name: nameIn.value, isHidden: hideIn.value === "1" };
-                savePromises.push(fetch(`${BASE_URL}/settings/${id}.json`, {
-                    method: 'PUT',
-                    body: JSON.stringify(accountSettings[id])
-                }));
-            }
+async function saveAndClose() {
+    // 1. 画面上の入力内容を JavaScript の変数（accountSettings）に反映
+    allAccountIds.forEach(id => {
+        const nameInput = document.getElementById(`name-${id}`);
+        const hideInput = document.getElementById(`hide-${id}`);
+        if (nameInput) {
+            accountSettings[id] = {
+                name: nameInput.value || id,
+                isHidden: hideInput.checked
+            };
+        }
+    });
+
+    // 2. 【重要】Workers（D1）に設定データを送りつける
+    try {
+        const response = await fetch(BASE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: accountSettings }) // 名前データを送信
         });
 
-        await Promise.all(savePromises);
-        closeSettings();
-        updateDropdown();
-        updateUI();
+        if (response.ok) {
+            alert("サーバーに名前を保存しました！他のブラウザにも反映されます。");
+        } else {
+            throw new Error("保存失敗");
+        }
+    } catch (e) {
+        console.error("Settings save error:", e);
+        alert("サーバーへの保存に失敗しました。Workersの設定を確認してください。");
     }
+
+    closeSettings();
+    updateUI();
+}
     
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
     function changeMonth(v) { displayDate.setMonth(displayDate.getMonth() + v); updateUI(); }
@@ -928,5 +942,6 @@ async function fetchAllData() {
 </body>
 
 </html>
+
 
 
