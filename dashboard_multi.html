@@ -137,10 +137,9 @@
 </div>
 
 <script>
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-    // ↓↓ ここだけ、あなたのWorkersのURLに書き換えてください！ ↓↓
+    // ★★★ ↓↓ WorkersのURLに書き換えてください ↓↓ ★★★
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
-    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
@@ -149,12 +148,15 @@
     let accountSettings = {}; 
     let currentType = 'Real'; // Real or Demo
 
-    // 1. 起動時にデータを読み込む
+    // 1. 起動時に実行
     window.onload = function() {
+        // テーマの復元（保存されていれば）
+        const savedTheme = localStorage.getItem('selected_theme');
+        if (savedTheme) changeTheme(savedTheme);
         fetchAllData();
     };
 
-    // 2. Workersからデータを取得
+    // 2. データ取得
     async function fetchAllData() {
         try {
             const res = await fetch(BASE_URL);
@@ -166,7 +168,7 @@
             accountsData = {};
             allAccountIds = [];
             
-            // 設定を反映
+            // 設定反映
             settings.forEach(s => {
                 accountSettings[s.account_id] = {
                     name: s.name,
@@ -174,7 +176,7 @@
                 };
             });
 
-            // 利益データを整理
+            // 利益データ整理
             profits.forEach(item => {
                 const id = item.account_id;
                 if (!accountsData[id]) {
@@ -191,58 +193,50 @@
                 }
             });
 
-            // 最終更新時刻の表示（簡易）
             document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
-
             updateDropdown();
-            updateUI();
+            updateUI(); // カレンダー更新
+            updateStats(); // ★追加：統計とBreakdown更新
 
         } catch (e) {
-            console.error("Load Error:", e);
-            alert("データ読み込みエラー: URLを確認してください");
+            console.error(e);
+            alert("データ読み込みエラー");
         }
     }
 
-    // 3. UIの更新（カレンダー＆合計）
+    // 3. 画面全体（カレンダー・合計）の更新
     function updateUI() {
-        // 年月の表示更新
+        // 日付表示
         document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
 
-        // カレンダーのクリア
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
 
-        // 選択された口座
         const select = document.getElementById('accountSelector');
         const selectedId = select ? select.value : 'all';
 
-        // 月の日数計算
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-        // 空白セル（前月分）
+        // 空白セル
         for (let i = 0; i < firstDay; i++) {
             const cell = document.createElement('div');
-            cell.className = 'cell'; 
-            cell.style.background = 'transparent'; // 空白は透明に
+            cell.className = 'cell';
+            cell.style.background = 'transparent';
             grid.appendChild(cell);
         }
 
         let monthlyTotal = 0;
 
-        // 日付セル生成
+        // 日付セル
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
             let dailyTotal = 0;
 
-            // 集計ロジック
             if (selectedId === 'all') {
                 allAccountIds.forEach(id => {
                     const s = accountSettings[id] || {};
-                    // 非表示でなく、かつ（今回はReal/Demo区別せず全表示、または必要ならここでフィルタ）
-                    if (!s.isHidden) {
-                        dailyTotal += getDailyProfit(id, dateStr);
-                    }
+                    if (!s.isHidden) dailyTotal += getDailyProfit(id, dateStr);
                 });
             } else {
                 dailyTotal = getDailyProfit(selectedId, dateStr);
@@ -252,40 +246,76 @@
             grid.appendChild(createCell(d, dailyTotal));
         }
 
-        // 合計の更新
+        // 月次合計表示
         const profitEl = document.getElementById('totalProfit');
         profitEl.textContent = (monthlyTotal > 0 ? "+" : "") + monthlyTotal.toLocaleString();
-        profitEl.style.color = monthlyTotal >= 0 ? 'var(--accent-green, #28a745)' : 'var(--accent-red, #dc3545)';
-
-        // 残高合計（簡易計算：全口座の最新残高合計）
-        let totalBal = 0;
-        allAccountIds.forEach(id => {
-            const s = accountSettings[id] || {};
-            if (!s.isHidden) totalBal += (accountsData[id].balance || 0);
-        });
-        document.getElementById('totalBalance').textContent = totalBal.toLocaleString();
+        profitEl.style.color = monthlyTotal >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        
+        // Breakdownなども更新
+        updateStats();
     }
 
-    // デザインに合わせたセル生成
-    function createCell(day, amount) {
-        const div = document.createElement('div');
-        div.className = 'cell'; // CSSクラス 'cell' を使用
+    // ★追加機能：統計と詳細リスト（Breakdown）の表示
+    function updateStats() {
+        // 1. 全残高の計算
+        let totalBal = 0;
+        let totalProfitAll = 0; // 全期間利益（簡易）
 
-        // 日付部分
-        const dateDiv = document.createElement('div');
-        dateDiv.className = 'cell-date';
-        dateDiv.textContent = day;
-        div.appendChild(dateDiv);
+        // 2. Breakdownリストの作成
+        const breakdownList = document.getElementById('monthlyBreakdownList');
+        const breakdownContainer = document.getElementById('monthlyBreakdownContainer');
+        
+        if (breakdownList) {
+            breakdownList.innerHTML = '';
+            let hasData = false;
+            
+            // 現在の月のデータを口座ごとに集計
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-        // 金額部分
-        if (amount !== 0) {
-            const valDiv = document.createElement('div');
-            valDiv.className = 'cell-value';
-            valDiv.textContent = amount.toLocaleString();
-            valDiv.style.color = amount >= 0 ? '#28a745' : '#dc3545'; // 緑か赤
-            div.appendChild(valDiv);
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || {};
+                if (s.isHidden) return; // 隠している口座はスキップ
+
+                // 残高加算
+                totalBal += (accountsData[id].balance || 0);
+
+                // この月の利益を計算
+                let monthProfit = 0;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+                    monthProfit += getDailyProfit(id, dateStr);
+                }
+
+                // リストに行を追加
+                const row = document.createElement('div');
+                row.className = 'bd-row';
+                row.innerHTML = `
+                    <span class="bd-name">${s.name || id}</span>
+                    <span class="bd-val" style="color:${monthProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+                        ${monthProfit.toLocaleString()}
+                    </span>
+                `;
+                breakdownList.appendChild(row);
+                hasData = true;
+            });
+
+            // データがあればコンテナを表示
+            if(breakdownContainer) breakdownContainer.style.display = hasData ? 'block' : 'none';
         }
 
+        // 3. 画面上の統計数値更新
+        const balEl = document.getElementById('totalBalance');
+        if(balEl) balEl.textContent = totalBal.toLocaleString();
+    }
+
+    function createCell(day, amount) {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.innerHTML = `<div class="cell-date">${day}</div>`;
+        if (amount !== 0) {
+            const color = amount >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+            div.innerHTML += `<div class="cell-value" style="color:${color}">${amount.toLocaleString()}</div>`;
+        }
         return div;
     }
 
@@ -296,24 +326,18 @@
             .reduce((sum, h) => sum + h.profit, 0);
     }
 
-    // 4. ドロップダウンと設定画面の生成
+    // --- 設定画面とドロップダウン ---
     function updateDropdown() {
         const select = document.getElementById('accountSelector');
         const listContainer = document.getElementById('idListContainer');
-        
         if (!select || !listContainer) return;
 
-        // ドロップダウン更新
         const currentVal = select.value;
         select.innerHTML = '<option value="all">ALL ACCOUNTS</option>';
-        
-        // 設定リスト更新
         listContainer.innerHTML = '';
 
         allAccountIds.forEach(id => {
             const s = accountSettings[id] || { name: '', isHidden: false };
-            
-            // ドロップダウンに追加（非表示以外）
             if (!s.isHidden) {
                 const option = document.createElement('option');
                 option.value = id;
@@ -321,15 +345,12 @@
                 select.appendChild(option);
             }
 
-            // 設定画面の行を作成
             const row = document.createElement('div');
             row.className = 'setting-row';
             row.innerHTML = `
-                <div style="font-size:10px; color:var(--text-dim); width:60px; overflow:hidden;">${id}</div>
+                <div style="font-size:10px; color:var(--text-dim); width:60px;">${id}</div>
                 <input type="text" id="name-${id}" value="${s.name || ''}" placeholder="Name">
-                <label style="font-size:10px; display:flex; align-items:center;">
-                    <input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> Hide
-                </label>
+                <label style="font-size:10px;"><input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> Hide</label>
             `;
             listContainer.appendChild(row);
         });
@@ -337,7 +358,6 @@
         if (currentVal) select.value = currentVal;
     }
 
-    // 5. 設定の保存
     async function saveAndClose() {
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
@@ -351,42 +371,45 @@
         });
 
         try {
-            const response = await fetch(BASE_URL, {
+            const res = await fetch(BASE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ settings: accountSettings })
             });
-            
-            const txt = await response.text();
-            if (response.ok) {
-                if (!txt.includes("Skipped")) alert("✅ Saved Successfully!");
+            if (res.ok) {
+                alert("✅ Saved!");
                 closeSettings();
-                location.reload(); 
+                location.reload();
             } else {
-                alert("Error: " + txt);
+                alert("Error: " + await res.text());
             }
         } catch (e) {
-            alert("Connection Error: " + e.message);
+            alert("Connection Error");
         }
     }
 
-    // ナビゲーション関数
+    // --- ★復活：テーマ切り替え機能 ---
+    function changeTheme(themeName) {
+        document.body.className = themeName; // bodyにクラスをつける方式と仮定
+        // もしCSSファイルの切り替えが必要なら以下のように実装
+        // document.getElementById('theme-link').href = `theme-${themeName}.css`;
+        localStorage.setItem('selected_theme', themeName);
+    }
+
     function changeMonth(step) {
         currentMonth += step;
         if (currentMonth > 11) { currentMonth = 0; currentYear++; }
         if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         updateUI();
     }
-
+    
     function switchType(type) {
         currentType = type;
         document.getElementById('btnReal').classList.toggle('active', type === 'Real');
         document.getElementById('btnDemo').classList.toggle('active', type === 'Demo');
-        // 必要ならここでフィルタリング処理を追加可能
-        updateUI();
+        // 必要ならここでフィルタリングを追加
     }
 
-    // モーダル制御
     function openSettings() {
         document.getElementById('settingsModal').style.display = 'flex';
         updateDropdown();
@@ -397,3 +420,4 @@
 </script>
 </body>
 </html>
+
