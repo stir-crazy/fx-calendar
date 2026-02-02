@@ -432,8 +432,88 @@
     function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
     async function saveAndClose() { allAccountIds.forEach(id => { const nameInput = document.getElementById(`name-${id}`); const hideVal = document.getElementById(`hide-val-${id}`); if (nameInput && hideVal) { if (!accountSettings[id]) accountSettings[id] = {}; accountSettings[id].name = nameInput.value; accountSettings[id].isHidden = (hideVal.value === '1'); } }); try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: accountSettings }) }); updateDropdown(); updateUI(); closeSettings(); } catch(e) { alert("Error"); } }
     function switchType(type) { currentType = type; document.getElementById('btnReal').classList.toggle('active', type === 'Real'); document.getElementById('btnDemo').classList.toggle('active', type === 'Demo'); updateDropdown(); updateUI(); }
-    function updateStats() { let totalBal = 0, totalProfitAll = 0, totalMonthlyProfit = 0, totalDepositAll = 0; const breakdownList = document.getElementById('monthlyBreakdownList'); if (breakdownList) breakdownList.innerHTML = ''; const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); const selectedId = document.getElementById('accountSelector').value || 'all'; const targetIds = (selectedId === 'all') ? allAccountIds : [selectedId]; let hasData = false; targetIds.forEach(id => { const s = accountSettings[id] || {}; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) { if(accountsData[id]) { const p = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0); totalProfitAll += p; totalBal += (accountsData[id].balance || 0); } totalDepositAll += (s.total_deposit || 0); let monthProfit = 0; for (let d = 1; d <= daysInMonth; d++) { const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`; monthProfit += getDailyProfit(id, dateStr); } totalMonthlyProfit += monthProfit; if (breakdownList && selectedId === 'all') { const row = document.createElement('div'); row.className = 'bd-row'; row.innerHTML = `<span class="bd-name">${s.name || id}</span><span class="bd-val">${monthProfit.toLocaleString()}</span>`; breakdownList.appendChild(row); hasData = true; } } }); document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none'; document.getElementById('totalBalance').textContent = totalBal.toLocaleString(); document.getElementById('totalProfitAllTime').textContent = (totalProfitAll >= 0 ? "+" : "") + totalProfitAll.toLocaleString(); const gainEl = document.getElementById('totalGainPct'); const monthlyGainEl = document.getElementById('monthlyGain'); if (totalDepositAll > 0) { const gain = (totalProfitAll / totalDepositAll) * 100; gainEl.textContent = (gain >= 0 ? "+" : "") + gain.toFixed(2) + " %"; const mStart = totalBal - totalMonthlyProfit; if (mStart > 0) { const mGain = (totalMonthlyProfit / mStart) * 100; monthlyGainEl.textContent = (mGain >= 0 ? "+" : "") + mGain.toFixed(2) + " %"; } else { monthlyGainEl.textContent = "-- %"; } } else { gainEl.textContent = "-- %"; monthlyGainEl.textContent = "-- %"; } }
+    function updateStats() {
+        let totalBal = 0, totalProfitAll = 0, totalMonthlyProfit = 0, totalDepositAll = 0;
+        const breakdownList = document.getElementById('monthlyBreakdownList');
+        if (breakdownList) breakdownList.innerHTML = '';
+        
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const selectedId = document.getElementById('accountSelector').value || 'all';
+        const targetIds = (selectedId === 'all') ? allAccountIds : [selectedId];
+        let hasData = false;
+
+        targetIds.forEach(id => {
+            const s = accountSettings[id] || {};
+            const isDemoAccount = (s.trade_mode === 'Demo');
+            const isTargetDemo = (currentType === 'Demo');
+
+            if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) {
+                if(accountsData[id]) {
+                    const p = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
+                    totalProfitAll += p;
+                    totalBal += (accountsData[id].balance || 0);
+                }
+                totalDepositAll += (s.total_deposit || 0);
+
+                let monthProfit = 0;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+                    monthProfit += getDailyProfit(id, dateStr);
+                }
+                totalMonthlyProfit += monthProfit;
+
+                if (breakdownList && selectedId === 'all') {
+                    const row = document.createElement('div');
+                    row.className = 'bd-row';
+                    row.innerHTML = `<span class="bd-name">${s.name || id}</span><span class="bd-val">${monthProfit.toLocaleString()}</span>`;
+                    breakdownList.appendChild(row);
+                    hasData = true;
+                }
+            }
+        });
+
+        document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
+        document.getElementById('totalBalance').textContent = totalBal.toLocaleString();
+        
+        // ★ 利益額の +0 表記も消す場合
+        document.getElementById('totalProfitAllTime').textContent = (totalProfitAll === 0 ? "" : (totalProfitAll > 0 ? "+" : "")) + totalProfitAll.toLocaleString();
+        document.getElementById('totalProfit').textContent = (totalMonthlyProfit === 0 ? "" : (totalMonthlyProfit > 0 ? "+" : "")) + totalMonthlyProfit.toLocaleString();
+
+        const gainEl = document.getElementById('totalGainPct');
+        const monthlyGainEl = document.getElementById('monthlyGain');
+
+        if (totalDepositAll > 0) {
+            // ★ トータルゲインの 0% 判定
+            const gain = (totalProfitAll / totalDepositAll) * 100;
+            const gainStr = gain.toFixed(2);
+            // 0.00 または -0.00 の場合は符号なし、それ以外はプラスなら+をつける
+            if (gainStr === "0.00" || gainStr === "-0.00") {
+                gainEl.textContent = "0.00 %";
+            } else {
+                gainEl.textContent = (gain > 0 ? "+" : "") + gainStr + " %";
+            }
+            
+            // ★ 月間ゲインの 0% 判定
+            const mStart = totalBal - totalMonthlyProfit;
+            if (mStart > 0) {
+                const mGain = (totalMonthlyProfit / mStart) * 100;
+                const mGainStr = mGain.toFixed(2);
+                
+                if (mGainStr === "0.00" || mGainStr === "-0.00") {
+                    monthlyGainEl.textContent = "0.00 %";
+                } else {
+                    monthlyGainEl.textContent = (mGain > 0 ? "+" : "") + mGainStr + " %";
+                }
+            } else { 
+                monthlyGainEl.textContent = "-- %"; 
+            }
+        } else { 
+            gainEl.textContent = "-- %"; 
+            monthlyGainEl.textContent = "-- %"; 
+        }
+    }
     function changeMonth(step) { currentMonth += step; if (currentMonth > 11) { currentMonth = 0; currentYear++; } if (currentMonth < 0) { currentMonth = 11; currentYear--; } updateUI(); }
 </script>
 </body>
 </html>
+
