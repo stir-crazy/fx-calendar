@@ -43,9 +43,26 @@
 .detail-val { font-family: monospace; font-weight: bold; margin-top: 2px; }
 .info-btn { margin-right: 8px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .info-btn:hover { border-color: var(--text-main); color: var(--text-main); }
-.info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-.info-table th { text-align: left; color: var(--text-dim); padding: 10px 0; font-weight: normal; width: 40%; border-bottom: 1px solid var(--border); }
-.info-table td { text-align: right; color: var(--text-main); padding: 10px 0; font-weight: bold; border-bottom: 1px solid var(--border); }
+
+/* ★ アカウント情報テーブルのスタイル強化 */
+.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.info-table th { 
+    text-align: left; 
+    color: var(--text-dim); 
+    padding: 12px 0; /* 高さを広げる */
+    font-weight: normal; 
+    width: 35%; 
+    border-bottom: 1px solid var(--border); 
+}
+.info-table td { 
+    text-align: right; 
+    color: var(--text-main); 
+    padding: 12px 0; /* 高さを広げる */
+    font-weight: bold; 
+    border-bottom: 1px solid var(--border); 
+    font-family: monospace, sans-serif;
+    font-size: 14px;
+}
 .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
 
 /* スイッチ */
@@ -80,9 +97,6 @@
 
         <div class="top-bar">
             <select id="accountSelector" class="account-select" onchange="handleAccountChange()"></select>
-            <button class="info-btn" onclick="openAccountInfo()">
-                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-            </button>
             <button class="settings-btn" onclick="openSettings()">⚙ Setting</button>
         </div>
     </div>
@@ -139,8 +153,8 @@
                 <div class="ts-value" id="totalBalance" style="color:#ffd700;">0</div>
             </div>
 
-            <div id="accountDetailsPanel" class="card-style" style="margin-top:10px; display:none;">
-                <div style="font-size:11px; font-weight:bold; color:var(--text-dim); margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:5px;">ACCOUNT INFORMATION</div>
+            <div id="accountDetailsPanel" class="card-style" style="margin-top:10px; display:none; padding: 15px;">
+                <div style="font-size:11px; font-weight:bold; letter-spacing: 1px; color:var(--text-dim); margin-bottom:5px; border-bottom:1px solid var(--border); padding-bottom:8px;">ACCOUNT INFORMATION</div>
                 <div id="accountDetailsContent"></div>
             </div>
         </div>
@@ -250,28 +264,22 @@
         updateUI(); 
     }
 
-    // ★ アカウント変更時の自動切替ロジック
+    // アカウント変更時の自動切替
     function handleAccountChange() {
         const select = document.getElementById('accountSelector');
         const accountId = select.value;
 
         if (accountId === 'all') {
-            // ALLの時は JPY に戻すのが基本（見やすさのため）
             setCurrency('JPY');
         } else {
             const s = accountSettings[accountId] || {};
             const curr = s.currency || 'JPY';
-            
-            // USD or USC 口座なら Native(USD/USC) モードへ
             if (curr === 'USD' || curr === 'USC') {
                 setCurrency('Native');
-            } 
-            // JPY口座なら JPY モードへ
-            else {
+            } else {
                 setCurrency('JPY');
             }
         }
-        // updateUIはsetCurrency内で呼ばれるのでここでは不要
     }
 
     function getDisplayValue(amount, fromCurrency, isAllMode) {
@@ -299,7 +307,7 @@
                 } else {
                     let decimals = 0; 
                     if (fromCurrency === 'USD') decimals = 2;
-                    else if (fromCurrency === 'USC') decimals = 2; 
+                    else if (fromCurrency === 'USC') decimals = 2; // 統計用:2桁
                     return { val: amount, unit: fromCurrency, decimals: decimals };
                 }
             }
@@ -408,12 +416,12 @@
                 const res = getDisplayValue(rawVal, nativeCurr, false);
                 cellDisplayVal = res.val;
                 
-                // ★ カレンダー表示: USCとJPYは整数(0)、USDは2桁
+                // カレンダー: USD=2桁、それ以外0桁
                 if (res.unit === 'USD') cellDecimals = 2;
-                else cellDecimals = 0; // USC/JPY
+                else cellDecimals = 0; 
 
                 finalUnit = res.unit;
-                finalDecimals = res.decimals; // 統計用は2桁
+                finalDecimals = res.decimals;
                 
             } else {
                 allAccountIds.forEach(id => {
@@ -455,7 +463,6 @@
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { 
             const absVal = Math.abs(amount);
-            // カレンダー内はカンマなし
             const valStr = absVal.toFixed(decimals);
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
         }
@@ -534,7 +541,6 @@
 
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
-        // ★ 統計はカンマあり
         const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: statDecimals, maximumFractionDigits: statDecimals });
         
         document.getElementById('totalBalance').innerHTML = `${fmt(totalBal)} <span style="font-size:12px; color:var(--text-dim);">${statUnit}</span>`;
@@ -565,15 +571,35 @@
         }
     }
 
+    // ★ パネル表示更新 (名前部分を修正)
     function updateAccountInfoPanel(isIndividual, accountId) {
         const panel = document.getElementById('accountDetailsPanel');
         const content = document.getElementById('accountDetailsContent');
         if (!isIndividual || accountId === 'all') { panel.style.display = 'none'; return; }
+        
         const s = accountSettings[accountId] || {};
         const updateTime = document.getElementById('lastTime').textContent;
         const cSizeRaw = Number(s.contract_size);
         const cSize = isNaN(cSizeRaw) || cSizeRaw === 0 ? '-' : cSizeRaw.toLocaleString();
-        content.innerHTML = `<table class="info-table"><tr><th>ID</th><td><span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span> <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal; margin-left:5px;">(${s.name})</span></td></tr><tr><th>Broker</th><td>${s.broker}</td></tr><tr><th>Type</th><td>${s.trade_mode}</td></tr><tr><th>Platform</th><td>${s.platform}</td></tr><tr><th>Currency</th><td>${s.currency}</td></tr><tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr><tr><th>Contract Size</th><td>${cSize}</td></tr><tr><th>Last Update</th><td>${updateTime}</td></tr></table>`;
+        
+        // 名前表示ロジック: 名前があり、かつIDと異なれば () に表示
+        let idDisplay = `<span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span>`;
+        if (s.name && s.name !== accountId) {
+            idDisplay += ` <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal;">(${s.name})</span>`;
+        }
+
+        content.innerHTML = `
+            <table class="info-table">
+                <tr><th>ID</th><td>${idDisplay}</td></tr>
+                <tr><th>Broker</th><td>${s.broker}</td></tr>
+                <tr><th>Type</th><td>${s.trade_mode}</td></tr>
+                <tr><th>Platform</th><td>${s.platform}</td></tr>
+                <tr><th>Currency</th><td>${s.currency}</td></tr>
+                <tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr>
+                <tr><th>Contract Size</th><td>${cSize}</td></tr>
+                <tr><th>Last Update</th><td>${updateTime}</td></tr>
+            </table>
+        `;
         panel.style.display = 'block';
     }
 
@@ -584,13 +610,13 @@
     function closeDailyDetails() { document.getElementById('dailyDetailsModal').style.display = 'none'; }
     function closeEditProfit() { document.getElementById('editProfitModal').style.display = 'none'; editingDate = null; editingAccountId = null; }
     function revertInput() { document.getElementById('editProfitInput').value = initialModalValue; }
+    function closeAccountInfo() { document.getElementById('accountInfoModal').style.display = 'none'; }
     async function saveProfitEdit() { const newVal = document.getElementById('editProfitInput').value; if (!editingDate || !editingAccountId) return; try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ update_profit: { account_id: editingAccountId, date: editingDate, amount: newVal } }) }); await fetchAllData(); if (document.getElementById('dailyDetailsModal').style.display === 'flex') { openDailyDetails(editingDate); } closeEditProfit(); } catch(e) { alert("更新エラー"); } }
     function getDailyProfit(id, dateStr) { if (!accountsData[id]) return 0; return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0); }
     function openSettings() { const modal = document.getElementById('settingsModal'); const container = document.getElementById('idListContainer'); container.innerHTML = ''; allAccountIds.forEach(id => { const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' }; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if (isDemoAccount === isTargetDemo) { const div = document.createElement('div'); div.className = 'setting-row'; const eyeIcon = s.isHidden ? ICON_EYE_SLASH : ICON_EYE_OPEN; const eyeClass = s.isHidden ? '' : 'active'; const eyeOpacity = s.isHidden ? '0.5' : '1'; div.innerHTML = `<div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">${id}</div><div class="setting-controls"><input type="text" class="setting-input" id="name-${id}" value="${s.name}" placeholder="Account Name"><button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')">${eyeIcon}</button><button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')">${ICON_TRASH}</button></div><input type="hidden" id="hide-val-${id}" value="${s.isHidden ? '1' : '0'}">`; container.appendChild(div); } }); modal.style.display = 'flex'; }
     function toggleHide(btn, id) { const inputVal = document.getElementById(`hide-val-${id}`); const isHidden = inputVal.value === '1'; if (isHidden) { inputVal.value = '0'; btn.innerHTML = ICON_EYE_OPEN; btn.classList.add('active'); btn.style.opacity = '1'; } else { inputVal.value = '1'; btn.innerHTML = ICON_EYE_SLASH; btn.classList.remove('active'); btn.style.opacity = '0.5'; } }
     async function deleteAccount(id) { if (!confirm(`Delete ${id}?`)) return; try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delete_account: id }) }); allAccountIds = allAccountIds.filter(aid => aid !== id); openSettings(); updateDropdown(); updateUI(); } catch(e) { alert("Error"); } }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-    function openAccountInfo() { /* 不要になったので空実装または削除 */ }
     function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
     async function saveAndClose() { allAccountIds.forEach(id => { const nameInput = document.getElementById(`name-${id}`); const hideVal = document.getElementById(`hide-val-${id}`); if (nameInput && hideVal) { if (!accountSettings[id]) accountSettings[id] = {}; accountSettings[id].name = nameInput.value; accountSettings[id].isHidden = (hideVal.value === '1'); } }); try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: accountSettings }) }); updateDropdown(); updateUI(); closeSettings(); } catch(e) { alert("Error"); } }
     function switchType(type) { currentType = type; document.getElementById('btnReal').classList.toggle('active', type === 'Real'); document.getElementById('btnDemo').classList.toggle('active', type === 'Demo'); updateDropdown(); updateUI(); }
