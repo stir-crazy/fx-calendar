@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 既存のスタイル */
+/* 既存スタイル */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
@@ -34,8 +34,6 @@
 .icon-btn.active { color: var(--accent-blue); }
 .icon-btn.delete:hover { color: #ff6b6b; }
 .svg-icon { width: 18px; height: 18px; fill: currentColor; }
-
-/* Resetボタンのスタイル */
 .reset-btn { width: 30%; padding: 12px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); border-radius: 4px; font-weight: bold; cursor: pointer; }
 .reset-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
 .update-btn { width: 68%; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
@@ -143,7 +141,7 @@
             <input type="number" id="editProfitInput" class="setting-input" placeholder="Enter profit amount" style="width:100%;">
         </div>
         <div style="display:flex; justify-content:space-between; gap:10px;">
-            <button onclick="resetDailyProfit()" class="reset-btn">Reset</button>
+            <button onclick="revertInput()" class="reset-btn">Reset</button>
             <button onclick="saveProfitEdit()" class="update-btn">Update Profit</button>
         </div>
     </div>
@@ -164,6 +162,7 @@
     let accountSettings = {}; 
     let currentType = 'Real';
     let editingDate = null; 
+    let initialModalValue = 0; // ★ 開いたときの数値を覚えておく変数
 
     window.onload = () => {
         const savedTheme = localStorage.getItem('selected_theme');
@@ -286,6 +285,7 @@
 
     function openEditProfit(dateStr, currentVal) {
         editingDate = dateStr;
+        initialModalValue = currentVal; // ★ ここで「開いた瞬間の値」を覚える！
         document.getElementById('editDateLabel').textContent = `Date: ${dateStr}`;
         document.getElementById('editProfitInput').value = currentVal;
         document.getElementById('editProfitModal').style.display = 'flex';
@@ -296,11 +296,18 @@
         editingDate = null;
     }
 
-    // 利益の保存処理
+    // ★ JSだけで入力を元に戻す機能
+    function revertInput() {
+        // 覚えておいた値に戻すだけ（サーバー通信なし）
+        document.getElementById('editProfitInput').value = initialModalValue;
+    }
+
+    // 利益の保存処理（Resetで戻した値もこれで送信すればOK）
     async function saveProfitEdit() {
         const select = document.getElementById('accountSelector');
         const accountId = select.value;
         const newVal = document.getElementById('editProfitInput').value;
+        
         if (!editingDate || accountId === 'all') return;
 
         try {
@@ -316,33 +323,12 @@
         } catch(e) { alert("更新エラー"); }
     }
 
-    // ★ リセット処理（新規追加）
-    async function resetDailyProfit() {
-        const select = document.getElementById('accountSelector');
-        const accountId = select.value;
-        
-        if (!editingDate || accountId === 'all') return;
-        if (!confirm(`${editingDate} のデータをリセットしますか？\n（リセット後は0になりますが、次回EA同期時に元に戻ります）`)) return;
-
-        try {
-            await fetch(BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    reset_daily_profit: { account_id: accountId, date: editingDate }
-                })
-            });
-            await fetchAllData();
-            closeEditProfit();
-        } catch(e) { alert("リセットエラー"); }
-    }
-
     function getDailyProfit(id, dateStr) {
         if (!accountsData[id]) return 0;
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
     
-    // ... (設定画面などの既存関数) ...
+    // ... 設定画面などの既存関数 ...
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
