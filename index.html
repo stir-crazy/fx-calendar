@@ -41,9 +41,9 @@
 .detail-info { flex: 1; }
 .detail-name { font-weight: bold; font-size: 13px; color: var(--text-main); }
 .detail-val { font-family: monospace; font-weight: bold; margin-top: 2px; }
-
-/* 情報テーブルのスタイル調整（埋め込み用） */
-.info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.info-btn { margin-right: 8px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.info-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+.info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
 .info-table th { text-align: left; color: var(--text-dim); padding: 10px 0; font-weight: normal; width: 40%; border-bottom: 1px solid var(--border); }
 .info-table td { text-align: right; color: var(--text-main); padding: 10px 0; font-weight: bold; border-bottom: 1px solid var(--border); }
 .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
@@ -79,7 +79,10 @@
         </div>
 
         <div class="top-bar">
-            <select id="accountSelector" class="account-select" onchange="updateUI()"></select>
+            <select id="accountSelector" class="account-select" onchange="handleAccountChange()"></select>
+            <button class="info-btn" onclick="openAccountInfo()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+            </button>
             <button class="settings-btn" onclick="openSettings()">⚙ Setting</button>
         </div>
     </div>
@@ -247,6 +250,30 @@
         updateUI(); 
     }
 
+    // ★ アカウント変更時の自動切替ロジック
+    function handleAccountChange() {
+        const select = document.getElementById('accountSelector');
+        const accountId = select.value;
+
+        if (accountId === 'all') {
+            // ALLの時は JPY に戻すのが基本（見やすさのため）
+            setCurrency('JPY');
+        } else {
+            const s = accountSettings[accountId] || {};
+            const curr = s.currency || 'JPY';
+            
+            // USD or USC 口座なら Native(USD/USC) モードへ
+            if (curr === 'USD' || curr === 'USC') {
+                setCurrency('Native');
+            } 
+            // JPY口座なら JPY モードへ
+            else {
+                setCurrency('JPY');
+            }
+        }
+        // updateUIはsetCurrency内で呼ばれるのでここでは不要
+    }
+
     function getDisplayValue(amount, fromCurrency, isAllMode) {
         let amountInJPY = 0;
         if (fromCurrency === "USC") amountInJPY = amount * exchangeRates["USC"];
@@ -272,7 +299,7 @@
                 } else {
                     let decimals = 0; 
                     if (fromCurrency === 'USD') decimals = 2;
-                    else if (fromCurrency === 'USC') decimals = 2; // 統計・詳細用
+                    else if (fromCurrency === 'USC') decimals = 2; 
                     return { val: amount, unit: fromCurrency, decimals: decimals };
                 }
             }
@@ -381,12 +408,12 @@
                 const res = getDisplayValue(rawVal, nativeCurr, false);
                 cellDisplayVal = res.val;
                 
-                // カレンダー内: USCなら0桁、USDなら2桁
+                // ★ カレンダー表示: USCとJPYは整数(0)、USDは2桁
                 if (res.unit === 'USD') cellDecimals = 2;
-                else cellDecimals = 0; 
+                else cellDecimals = 0; // USC/JPY
 
                 finalUnit = res.unit;
-                finalDecimals = res.decimals; // 統計用は2桁維持
+                finalDecimals = res.decimals; // 統計用は2桁
                 
             } else {
                 allAccountIds.forEach(id => {
@@ -415,7 +442,6 @@
         document.getElementById('totalProfit').textContent = dispStr;
         document.getElementById('monthlyProfitUnit').textContent = finalUnit;
         
-        // ★ 情報パネル更新
         updateAccountInfoPanel(isIndividual, selectedId);
         
         updateStats();
@@ -429,6 +455,7 @@
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { 
             const absVal = Math.abs(amount);
+            // カレンダー内はカンマなし
             const valStr = absVal.toFixed(decimals);
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
         }
@@ -507,6 +534,7 @@
 
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
+        // ★ 統計はカンマあり
         const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: statDecimals, maximumFractionDigits: statDecimals });
         
         document.getElementById('totalBalance').innerHTML = `${fmt(totalBal)} <span style="font-size:12px; color:var(--text-dim);">${statUnit}</span>`;
@@ -537,37 +565,19 @@
         }
     }
 
-    // ★ 新規: パネル更新
     function updateAccountInfoPanel(isIndividual, accountId) {
         const panel = document.getElementById('accountDetailsPanel');
         const content = document.getElementById('accountDetailsContent');
-        
-        if (!isIndividual || accountId === 'all') {
-            panel.style.display = 'none';
-            return;
-        }
-
+        if (!isIndividual || accountId === 'all') { panel.style.display = 'none'; return; }
         const s = accountSettings[accountId] || {};
         const updateTime = document.getElementById('lastTime').textContent;
         const cSizeRaw = Number(s.contract_size);
         const cSize = isNaN(cSizeRaw) || cSizeRaw === 0 ? '-' : cSizeRaw.toLocaleString();
-
-        content.innerHTML = `
-            <table class="info-table">
-                <tr><th>ID</th><td><span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span> <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal; margin-left:5px;">(${s.name})</span></td></tr>
-                <tr><th>Broker</th><td>${s.broker}</td></tr>
-                <tr><th>Type</th><td>${s.trade_mode}</td></tr>
-                <tr><th>Platform</th><td>${s.platform}</td></tr>
-                <tr><th>Currency</th><td>${s.currency}</td></tr>
-                <tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr>
-                <tr><th>Contract Size</th><td>${cSize}</td></tr>
-                <tr><th>Last Update</th><td>${updateTime}</td></tr>
-            </table>
-        `;
+        content.innerHTML = `<table class="info-table"><tr><th>ID</th><td><span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span> <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal; margin-left:5px;">(${s.name})</span></td></tr><tr><th>Broker</th><td>${s.broker}</td></tr><tr><th>Type</th><td>${s.trade_mode}</td></tr><tr><th>Platform</th><td>${s.platform}</td></tr><tr><th>Currency</th><td>${s.currency}</td></tr><tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr><tr><th>Contract Size</th><td>${cSize}</td></tr><tr><th>Last Update</th><td>${updateTime}</td></tr></table>`;
         panel.style.display = 'block';
     }
 
-    // ... その他の既存関数 ...
+    // ... 省略なし ...
     function openDailyDetails(dateStr) { document.getElementById('detailsDateLabel').textContent = `Details: ${dateStr}`; const list = document.getElementById('dailyDetailsList'); list.innerHTML = ''; allAccountIds.forEach(id => { const s = accountSettings[id] || {}; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); const currency = s.currency || "JPY"; if (!s.isHidden && isDemoAccount === isTargetDemo) { const rawProfit = getDailyProfit(id, dateStr); const color = rawProfit >= 0 ? '#28a745' : '#dc3545'; const res = getDisplayValue(rawProfit, currency, false); const valStr = res.val.toLocaleString(undefined, { minimumFractionDigits: res.decimals, maximumFractionDigits: res.decimals }); const div = document.createElement('div'); div.className = 'detail-row'; div.innerHTML = `<div class="detail-info"><div class="detail-name">${s.name || id}</div><div class="detail-val" style="color:${color}">${rawProfit > 0 ? '+' : ''}${valStr} <span style="font-size:10px;">${res.unit}</span></div></div><button class="icon-btn" onclick="openEditProfit('${dateStr}', ${rawProfit}, '${id}', '${currency}')" title="Edit">${ICON_EDIT}</button>`; list.appendChild(div); } }); document.getElementById('dailyDetailsModal').style.display = 'flex'; }
     function openEditProfit(dateStr, currentVal, accountId, currency='JPY') { editingDate = dateStr; editingAccountId = accountId; initialModalValue = currentVal; const accountName = accountSettings[accountId]?.name || accountId; const s = accountSettings[accountId] || {}; const nativeCurrency = s.currency || "JPY"; document.getElementById('editDateLabel').textContent = `Date: ${dateStr} (${accountName})`; const input = document.getElementById('editProfitInput'); input.value = currentVal; input.placeholder = `Amount in ${nativeCurrency}`; document.getElementById('editProfitModal').style.display = 'flex'; }
     function updateDropdown() { const select = document.getElementById('accountSelector'); if (!select) return; const currentVal = select.value; select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`; allAccountIds.forEach(id => { const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' }; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if (isDemoAccount === isTargetDemo && !s.isHidden) { const option = document.createElement('option'); option.value = id; option.textContent = s.name ? `${s.name} (${id})` : id; select.appendChild(option); } }); if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) { select.value = currentVal; } else { select.value = "all"; } }
@@ -580,6 +590,7 @@
     function toggleHide(btn, id) { const inputVal = document.getElementById(`hide-val-${id}`); const isHidden = inputVal.value === '1'; if (isHidden) { inputVal.value = '0'; btn.innerHTML = ICON_EYE_OPEN; btn.classList.add('active'); btn.style.opacity = '1'; } else { inputVal.value = '1'; btn.innerHTML = ICON_EYE_SLASH; btn.classList.remove('active'); btn.style.opacity = '0.5'; } }
     async function deleteAccount(id) { if (!confirm(`Delete ${id}?`)) return; try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delete_account: id }) }); allAccountIds = allAccountIds.filter(aid => aid !== id); openSettings(); updateDropdown(); updateUI(); } catch(e) { alert("Error"); } }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function openAccountInfo() { /* 不要になったので空実装または削除 */ }
     function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
     async function saveAndClose() { allAccountIds.forEach(id => { const nameInput = document.getElementById(`name-${id}`); const hideVal = document.getElementById(`hide-val-${id}`); if (nameInput && hideVal) { if (!accountSettings[id]) accountSettings[id] = {}; accountSettings[id].name = nameInput.value; accountSettings[id].isHidden = (hideVal.value === '1'); } }); try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: accountSettings }) }); updateDropdown(); updateUI(); closeSettings(); } catch(e) { alert("Error"); } }
     function switchType(type) { currentType = type; document.getElementById('btnReal').classList.toggle('active', type === 'Real'); document.getElementById('btnDemo').classList.toggle('active', type === 'Demo'); updateDropdown(); updateUI(); }
