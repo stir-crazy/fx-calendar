@@ -108,51 +108,90 @@
 
     window.onload = () => fetchAllData();
 
-    async function fetchAllData() {
-        try {
-            const res = await fetch(BASE_URL);
-            const data = await res.json();
+async function fetchAllData() {
+    try {
+        const res = await fetch(BASE_URL);
+        const data = await res.json();
+        
+        const profits = data.profits || [];
+        const settings = data.settings || [];
+
+        accountsData = {};
+        allAccountIds = [];
+        
+        // 1. まず設定（settings）から口座IDをすべて取得する
+        settings.forEach(s => {
+            const id = String(s.account_id);
+            if (!allAccountIds.includes(id)) {
+                allAccountIds.push(id);
+            }
             
-            const profits = data.profits || [];
-            const settings = data.settings || [];
+            accountSettings[id] = { 
+                name: s.name || "", 
+                isHidden: s.is_hidden === 1,
+                total_deposit: Number(s.total_deposit) || 0,
+                // ★ null の場合はとりあえず "Real" 扱いにして表示させる
+                trade_mode: s.trade_mode || "Real",
+                equity: Number(s.equity) || 0
+            };
+        });
 
-            accountsData = {};
-            allAccountIds = [];
-            
-            settings.forEach(s => {
-                // ★データベースの項目名（アンダーバー）をJSのオブジェクトに正しくマッピング
-                accountSettings[s.account_id] = { 
-                    name: s.name, 
-                    isHidden: s.is_hidden === 1,
-                    total_deposit: Number(s.total_deposit) || 0,
-                    trade_mode: s.trade_mode || "Real",
-                    equity: Number(s.equity) || 0
-                };
-            });
+        // 2. 取引履歴（profits）を整理
+        profits.forEach(item => {
+            const id = String(item.account_id);
+            if (!accountsData[id]) {
+                accountsData[id] = { balance: 0, history: [] };
+                if (!allAccountIds.includes(id)) allAccountIds.push(id);
+            }
+            if (item.timestamp.startsWith("9999")) {
+                accountsData[id].balance = Number(item.amount);
+            } else {
+                accountsData[id].history.push({
+                    profit: Number(item.amount),
+                    close_time: item.timestamp.replace(/-/g, '.')
+                });
+            }
+        });
 
-            profits.forEach(item => {
-                const id = item.account_id;
-                if (!accountsData[id]) {
-                    accountsData[id] = { balance: 0, history: [] };
-                    allAccountIds.push(id);
-                }
-                if (item.timestamp.startsWith("9999")) {
-                    accountsData[id].balance = Number(item.amount);
-                } else {
-                    accountsData[id].history.push({
-                        profit: Number(item.amount),
-                        close_time: item.timestamp.replace(/-/g, '.')
-                    });
-                }
-            });
-
-            document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
-            updateDropdown();
-            updateUI();
-        } catch (e) {
-            console.error(e);
-        }
+        document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
+        updateDropdown(); // ここでドロップダウンを作成
+        updateUI();       // ここでカレンダーと統計を表示
+    } catch (e) {
+        console.error("Fetch Error:", e);
     }
+}
+
+function updateDropdown() {
+    const select = document.getElementById('accountSelector');
+    if (!select) return;
+
+    const currentVal = select.value;
+    // 表示をリセット
+    select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`;
+
+    allAccountIds.forEach(id => {
+        const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
+        
+        // ★ モード判定を少し緩くします
+        const isDemo = (s.trade_mode === 'Demo');
+        const modeMatch = (currentType === 'Real' && !isDemo) || (currentType === 'Demo' && isDemo);
+
+        if (modeMatch && !s.isHidden) {
+            const option = document.createElement('option');
+            option.value = id;
+            // ★ 名前があれば「名前 (ID)」、なければ「ID」を表示
+            option.textContent = s.name ? `${s.name} (${id})` : id;
+            select.appendChild(option);
+        }
+    });
+
+    // 以前の選択を維持、なければ 'all'
+    if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+        select.value = currentVal;
+    } else {
+        select.value = "all";
+    }
+}
 
 function updateUI() {
     // 表示している年月を更新
@@ -334,4 +373,5 @@ function updateUI() {
 </script>
 </body>
 </html>
+
 
