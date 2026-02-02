@@ -11,10 +11,14 @@
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
-.cell { aspect-ratio: 0.9; background: var(--card-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; position: relative; }
+.cell { aspect-ratio: 0.9; background: var(--card-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; position: relative; transition: background 0.2s; }
 .cell:nth-child(7n) { border-right: none; }
 .cell-date { font-size: 10px; color: var(--text-dim); align-self: flex-start; margin-left: 4px; margin-top: 4px; position:absolute; top:0; left:0; }
 .cell-value { font-size: 10px; font-weight: bold; text-align: center; width: 100%; line-height: 1.1; word-break: break-all; white-space: normal; margin-top: 10px; }
+
+/* 編集可能なセルのスタイル */
+.cell.editable { cursor: pointer; }
+.cell.editable:hover { background: rgba(255, 255, 255, 0.05); }
 
 /* 曜日ヘッダー */
 .day-header-row { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; margin-bottom: 5px; text-align: center; }
@@ -27,7 +31,7 @@
 .bd-row:last-child { border-bottom: none; }
 .bd-name { color: var(--text-main); font-weight: bold; }
 
-/* 設定画面UI（アイコン対応） */
+/* 設定・編集画面UI */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: flex; justify-content: center; align-items: center; }
 .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; border: 1px solid var(--border); color: var(--text-main); }
 .setting-row { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -131,11 +135,24 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="editProfitModal" style="display:none;">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+            <span style="font-weight:bold;">Edit Daily Profit</span>
+            <button onclick="closeEditProfit()" style="background:none; border:none; color:var(--text-dim); font-size:20px;">✕</button>
+        </div>
+        <div style="margin-bottom:15px;">
+            <div id="editDateLabel" style="color:var(--text-dim); font-size:12px; margin-bottom:5px;">Date: ----.--.--</div>
+            <input type="number" id="editProfitInput" class="setting-input" placeholder="Enter profit amount" style="width:100%;">
+        </div>
+        <button onclick="saveProfitEdit()" style="width:100%; padding:12px; background:var(--accent-blue); color:white; border:none; border-radius:4px; font-weight:bold;">Update Profit</button>
+    </div>
+</div>
+
 <script>
     // ★★★ WorkersのURL ★★★
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
 
-    // SVG Icons
     const ICON_EYE_OPEN = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
     const ICON_EYE_SLASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.83 9L15 12.17V12a3 3 0 00-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L2.1 19l1.41 1.41L20.59 3.41 19.17 2l-3.66 3.66C14.44 5.23 13.26 5 12 5 7 5 2.73 8.11 1 12.5c1.24 3.15 3.73 5.61 6.86 6.55.51.15 1.01.24 1.52.24.84 0 1.65-.24 2.37-.62l.1.1.26.26-.01-.03zM12 7c.27 0 .52.04.77.09L10.1 9.76c.04-.25.09-.5.09-.76 0-1.66 1.34-3 3-3z"/></svg>`;
     const ICON_TRASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
@@ -146,6 +163,7 @@
     let allAccountIds = [];
     let accountSettings = {}; 
     let currentType = 'Real';
+    let editingDate = null; // 編集中の日付を保持
 
     window.onload = () => {
         const savedTheme = localStorage.getItem('selected_theme');
@@ -157,7 +175,6 @@
         try {
             const res = await fetch(BASE_URL);
             const data = await res.json();
-            
             accountsData = {};
             allAccountIds = [];
             accountSettings = {};
@@ -219,38 +236,121 @@
         else { select.value = "all"; }
     }
 
-    // ★ 設定画面の描画（アイコンUI）
+    function updateUI() {
+        document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        const select = document.getElementById('accountSelector');
+        const selectedId = (select && select.value) ? select.value : 'all';
+        const isIndividual = selectedId !== 'all'; // 個別ID選択中かどうか
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        for (let i = 0; i < firstDay; i++) grid.appendChild(createCell(i, 0, true));
+
+        let monthlyTotal = 0;
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+            let dailyTotal = 0;
+            if (isIndividual) {
+                dailyTotal = getDailyProfit(selectedId, dateStr);
+            } else {
+                allAccountIds.forEach(id => {
+                    const s = accountSettings[id] || {};
+                    const isDemoAccount = (s.trade_mode === 'Demo');
+                    const isTargetDemo = (currentType === 'Demo');
+                    if (!s.isHidden && isDemoAccount === isTargetDemo) { dailyTotal += getDailyProfit(id, dateStr); }
+                });
+            }
+            monthlyTotal += dailyTotal;
+            // 個別ID選択時のみ編集可能にする
+            grid.appendChild(createCell(d, dailyTotal, false, isIndividual, dateStr, dailyTotal));
+        }
+        document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
+        updateStats();
+    }
+
+    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', currentVal=0) {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        if(isEmpty) { div.style.background='transparent'; return div; }
+        
+        div.innerHTML = `<div class="cell-date">${day}</div>`;
+        if (amount !== 0) { div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${amount.toLocaleString()}</div>`; }
+        
+        // 編集機能の追加
+        if (isEditable) {
+            div.classList.add('editable');
+            div.onclick = () => openEditProfit(dateStr, currentVal);
+        }
+        return div;
+    }
+
+    // 利益編集モーダルを開く
+    function openEditProfit(dateStr, currentVal) {
+        editingDate = dateStr;
+        document.getElementById('editDateLabel').textContent = `Date: ${dateStr}`;
+        document.getElementById('editProfitInput').value = currentVal;
+        document.getElementById('editProfitModal').style.display = 'flex';
+    }
+
+    function closeEditProfit() {
+        document.getElementById('editProfitModal').style.display = 'none';
+        editingDate = null;
+    }
+
+    // 利益の保存処理
+    async function saveProfitEdit() {
+        const select = document.getElementById('accountSelector');
+        const accountId = select.value;
+        const newVal = document.getElementById('editProfitInput').value;
+        
+        if (!editingDate || accountId === 'all') return;
+
+        try {
+            await fetch(BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    update_profit: { // Workersに追加したコマンド
+                        account_id: accountId,
+                        date: editingDate,
+                        amount: newVal
+                    }
+                })
+            });
+            // データを再取得して更新
+            await fetchAllData();
+            closeEditProfit();
+        } catch(e) { alert("更新エラー"); }
+    }
+
+    function getDailyProfit(id, dateStr) {
+        if (!accountsData[id]) return 0;
+        return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
+    }
+    
+    // ... (設定画面などの既存関数はそのまま) ...
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
         container.innerHTML = '';
-
         allAccountIds.forEach(id => {
             const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
             const isDemoAccount = (s.trade_mode === 'Demo');
             const isTargetDemo = (currentType === 'Demo');
-
             if (isDemoAccount === isTargetDemo) {
                 const div = document.createElement('div');
                 div.className = 'setting-row';
-                
-                // 目のアイコン（開/閉）
                 const eyeIcon = s.isHidden ? ICON_EYE_SLASH : ICON_EYE_OPEN;
                 const eyeClass = s.isHidden ? '' : 'active';
                 const eyeOpacity = s.isHidden ? '0.5' : '1';
-
                 div.innerHTML = `
                     <div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">${id}</div>
                     <div class="setting-controls">
                         <input type="text" class="setting-input" id="name-${id}" value="${s.name}" placeholder="Account Name">
-                        
-                        <button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')" title="Toggle Visibility">
-                            ${eyeIcon}
-                        </button>
-                        
-                        <button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')" title="Delete Account">
-                            ${ICON_TRASH}
-                        </button>
+                        <button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')">${eyeIcon}</button>
+                        <button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')">${ICON_TRASH}</button>
                     </div>
                     <input type="hidden" id="hide-val-${id}" value="${s.isHidden ? '1' : '0'}">
                 `;
@@ -259,47 +359,22 @@
         });
         modal.style.display = 'flex';
     }
-
-    // 目のアイコン切り替え処理
     function toggleHide(btn, id) {
         const inputVal = document.getElementById(`hide-val-${id}`);
         const isHidden = inputVal.value === '1';
-        
-        // 反転させる
-        if (isHidden) {
-            inputVal.value = '0';
-            btn.innerHTML = ICON_EYE_OPEN;
-            btn.classList.add('active');
-            btn.style.opacity = '1';
-        } else {
-            inputVal.value = '1';
-            btn.innerHTML = ICON_EYE_SLASH;
-            btn.classList.remove('active');
-            btn.style.opacity = '0.5';
-        }
+        if (isHidden) { inputVal.value = '0'; btn.innerHTML = ICON_EYE_OPEN; btn.classList.add('active'); btn.style.opacity = '1'; } 
+        else { inputVal.value = '1'; btn.innerHTML = ICON_EYE_SLASH; btn.classList.remove('active'); btn.style.opacity = '0.5'; }
     }
-
-    // アカウント削除処理
     async function deleteAccount(id) {
-        if (!confirm(`Are you sure you want to delete account ${id}? This cannot be undone.`)) return;
-        
+        if (!confirm(`Delete ${id}?`)) return;
         try {
-            await fetch(BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ delete_account: id }) // Workersに追加した削除コマンド
-            });
-            // リストから即座に削除して再描画
+            await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delete_account: id }) });
             allAccountIds = allAccountIds.filter(aid => aid !== id);
-            openSettings(); // 設定画面を更新
-            updateDropdown();
-            updateUI();
-        } catch(e) { alert("削除エラーが発生しました"); }
+            openSettings(); updateDropdown(); updateUI();
+        } catch(e) { alert("Error"); }
     }
-
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
     function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
-
     async function saveAndClose() {
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
@@ -311,63 +386,15 @@
             }
         });
         try {
-            await fetch(BASE_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ settings: accountSettings })
-            });
-            updateDropdown();
-            updateUI();
-            closeSettings();
-        } catch(e) { alert("保存エラー"); }
+            await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: accountSettings }) });
+            updateDropdown(); updateUI(); closeSettings();
+        } catch(e) { alert("Error"); }
     }
-
     function switchType(type) {
         currentType = type;
         document.getElementById('btnReal').classList.toggle('active', type === 'Real');
         document.getElementById('btnDemo').classList.toggle('active', type === 'Demo');
-        updateDropdown();
-        updateUI();
-    }
-    function updateUI() {
-        document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-        const select = document.getElementById('accountSelector');
-        const selectedId = (select && select.value) ? select.value : 'all';
-        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        for (let i = 0; i < firstDay; i++) grid.appendChild(createCell(i, 0, true));
-
-        let monthlyTotal = 0;
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-            let dailyTotal = 0;
-            if (selectedId === 'all') {
-                allAccountIds.forEach(id => {
-                    const s = accountSettings[id] || {};
-                    const isDemoAccount = (s.trade_mode === 'Demo');
-                    const isTargetDemo = (currentType === 'Demo');
-                    if (!s.isHidden && isDemoAccount === isTargetDemo) { dailyTotal += getDailyProfit(id, dateStr); }
-                });
-            } else { dailyTotal = getDailyProfit(selectedId, dateStr); }
-            monthlyTotal += dailyTotal;
-            grid.appendChild(createCell(d, dailyTotal));
-        }
-        document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
-        updateStats();
-    }
-    function createCell(day, amount, isEmpty=false) {
-        const div = document.createElement('div');
-        div.className = 'cell';
-        if(isEmpty) { div.style.background='transparent'; return div; }
-        div.innerHTML = `<div class="cell-date">${day}</div>`;
-        if (amount !== 0) { div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${amount.toLocaleString()}</div>`; }
-        return div;
-    }
-    function getDailyProfit(id, dateStr) {
-        if (!accountsData[id]) return 0;
-        return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
+        updateDropdown(); updateUI();
     }
     function updateStats() {
         let totalBal = 0, totalProfitAll = 0, totalMonthlyProfit = 0, totalDepositAll = 0;
