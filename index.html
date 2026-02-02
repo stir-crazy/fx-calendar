@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 既存のデザインを維持 */
+/* デザイン維持 */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
@@ -20,7 +20,14 @@
 .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .bd-row:last-child { border-bottom: none; }
 .bd-name { color: var(--text-main); font-weight: bold; }
-.bd-val { font-family: monospace; font-weight: bold; }
+/* ドロップダウンの強制スタイル（見えない問題対策） */
+select#accountSelector {
+    background-color: var(--card-bg) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--accent-blue) !important;
+    font-weight: bold;
+}
+option { background-color: #333; color: white; }
 </style>
 </head>
 <body>
@@ -28,9 +35,7 @@
 <div class="container">
     <header class="global-header">
         <div class="nav-container">
-            <a href="#" class="logo">
-                <span class="c-stir">STIR</span>&nbsp;<span class="c-tracker">TRACKER</span>
-            </a>
+            <a href="#" class="logo"><span class="c-stir">STIR</span>&nbsp;<span class="c-tracker">TRACKER</span></a>
         </div>
     </header>
 
@@ -39,8 +44,11 @@
             <button class="type-btn active" id="btnReal" onclick="switchType('Real')">REAL ACCOUNT</button>
             <button class="type-btn" id="btnDemo" onclick="switchType('Demo')">DEMO ACCOUNT</button>
         </div>
+
         <div class="top-bar">
-            <select id="accountSelector" class="account-select" onchange="updateUI()"></select>
+            <select id="accountSelector" class="account-select" onchange="updateUI()">
+                <option value="all">Loading...</option>
+            </select>
             <button class="settings-btn" onclick="openSettings()">⚙ Setting</button>
         </div>
     </div>
@@ -108,144 +116,136 @@
 
     window.onload = () => fetchAllData();
 
-async function fetchAllData() {
-    try {
-        const res = await fetch(BASE_URL);
-        const data = await res.json();
-        
-        const profits = data.profits || [];
-        const settings = data.settings || [];
-
-        accountsData = {};
-        allAccountIds = [];
-        
-        // 1. まず設定（settings）から口座IDをすべて取得する
-        settings.forEach(s => {
-            const id = String(s.account_id);
-            if (!allAccountIds.includes(id)) {
-                allAccountIds.push(id);
-            }
+    async function fetchAllData() {
+        try {
+            const res = await fetch(BASE_URL);
+            const data = await res.json();
             
-            accountSettings[id] = { 
-                name: s.name || "", 
-                isHidden: s.is_hidden === 1,
-                total_deposit: Number(s.total_deposit) || 0,
-                // ★ null の場合はとりあえず "Real" 扱いにして表示させる
-                trade_mode: s.trade_mode || "Real",
-                equity: Number(s.equity) || 0
-            };
-        });
+            // データ初期化
+            accountsData = {};
+            allAccountIds = [];
+            accountSettings = {};
 
-        // 2. 取引履歴（profits）を整理
-        profits.forEach(item => {
-            const id = String(item.account_id);
-            if (!accountsData[id]) {
-                accountsData[id] = { balance: 0, history: [] };
-                if (!allAccountIds.includes(id)) allAccountIds.push(id);
-            }
-            if (item.timestamp.startsWith("9999")) {
-                accountsData[id].balance = Number(item.amount);
-            } else {
-                accountsData[id].history.push({
-                    profit: Number(item.amount),
-                    close_time: item.timestamp.replace(/-/g, '.')
+            // 1. 設定データ読み込み（IDを最優先で確保）
+            if (data.settings) {
+                data.settings.forEach(s => {
+                    const id = String(s.account_id);
+                    if (!allAccountIds.includes(id)) allAccountIds.push(id);
+                    
+                    accountSettings[id] = { 
+                        name: s.name || "", 
+                        isHidden: false, // ★強制表示のため非表示設定を無視
+                        total_deposit: Number(s.total_deposit) || 0,
+                        trade_mode: s.trade_mode || "Real",
+                        equity: Number(s.equity) || 0
+                    };
                 });
             }
-        });
 
-        document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
-        updateDropdown(); // ここでドロップダウンを作成
-        updateUI();       // ここでカレンダーと統計を表示
-    } catch (e) {
-        console.error("Fetch Error:", e);
-    }
-}
+            // 2. 取引データ読み込み
+            if (data.profits) {
+                data.profits.forEach(item => {
+                    const id = String(item.account_id);
+                    if (!accountsData[id]) {
+                        accountsData[id] = { balance: 0, history: [] };
+                        if (!allAccountIds.includes(id)) allAccountIds.push(id);
+                    }
+                    if (item.timestamp.startsWith("9999")) {
+                        accountsData[id].balance = Number(item.amount);
+                    } else {
+                        accountsData[id].history.push({
+                            profit: Number(item.amount),
+                            close_time: item.timestamp.replace(/-/g, '.')
+                        });
+                    }
+                });
+            }
 
-function updateDropdown() {
-    const select = document.getElementById('accountSelector');
-    if (!select) return;
-
-    const currentVal = select.value;
-    // 表示をリセット
-    select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`;
-
-    allAccountIds.forEach(id => {
-        const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
-        
-        // ★ モード判定を少し緩くします
-        const isDemo = (s.trade_mode === 'Demo');
-        const modeMatch = (currentType === 'Real' && !isDemo) || (currentType === 'Demo' && isDemo);
-
-        if (modeMatch && !s.isHidden) {
-            const option = document.createElement('option');
-            option.value = id;
-            // ★ 名前があれば「名前 (ID)」、なければ「ID」を表示
-            option.textContent = s.name ? `${s.name} (${id})` : id;
-            select.appendChild(option);
+            document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
+            updateDropdown(); // ドロップダウン作成
+            updateUI();       // 画面描画
+        } catch (e) {
+            alert("データ取得エラー: " + e);
         }
-    });
-
-    // 以前の選択を維持、なければ 'all'
-    if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
-        select.value = currentVal;
-    } else {
-        select.value = "all";
-    }
-}
-
-function updateUI() {
-    // 表示している年月を更新
-    document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
-    
-    const grid = document.getElementById('calendarGrid');
-    grid.innerHTML = '';
-
-    const select = document.getElementById('accountSelector');
-    // ★ 修正ポイント: 選択が空(nullや空文字)の場合は 'all' を使うように強制します
-    const selectedId = (select && select.value) ? select.value : 'all';
-
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-    // カレンダーの空白埋め
-    for (let i = 0; i < firstDay; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.style.background = 'transparent'; 
-        grid.appendChild(cell);
     }
 
-    let monthlyTotal = 0;
+    // ★ 修正版：フィルタを全撤廃してとにかく表示する関数
+    function updateDropdown() {
+        const select = document.getElementById('accountSelector');
+        if (!select) return;
 
-    // 1日から末日までループ
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-        let dailyTotal = 0;
+        const currentVal = select.value;
+        select.innerHTML = ''; // 一旦空にする
 
-        if (selectedId === 'all') {
-            allAccountIds.forEach(id => {
-                const s = accountSettings[id] || {};
-                // モード（Real/Demo）をチェック
-                const modeMatch = (currentType === 'Real' && s.trade_mode !== 'Demo') || (currentType === 'Demo' && s.trade_mode === 'Demo');
-                if (!s.isHidden && modeMatch) {
-                    dailyTotal += getDailyProfit(id, dateStr);
-                }
-            });
+        // 1. "ALL ACCOUNTS" を追加
+        const allOption = document.createElement('option');
+        allOption.value = "all";
+        allOption.textContent = "ALL ACCOUNTS (Total)";
+        select.appendChild(allOption);
+
+        // 2. 存在するIDをすべて追加（Real/Demo区別なし）
+        if (allAccountIds.length === 0) {
+            const emptyOption = document.createElement('option');
+            emptyOption.textContent = "(No Accounts Found)";
+            select.appendChild(emptyOption);
         } else {
-            dailyTotal = getDailyProfit(selectedId, dateStr);
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || { name: '', trade_mode: '?' };
+                const option = document.createElement('option');
+                option.value = id;
+                // 名前 (ID) [Type] の形式で表示
+                option.textContent = `${s.name || 'No Name'} (${id})`; 
+                select.appendChild(option);
+            });
         }
 
-        monthlyTotal += dailyTotal;
-        grid.appendChild(createCell(d, dailyTotal));
+        // 選択状態の復元
+        if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+            select.value = currentVal;
+        } else {
+            select.value = "all";
+        }
     }
 
-    // 月間合計利益の表示を更新
-    const profitEl = document.getElementById('totalProfit');
-    profitEl.textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
-    profitEl.style.color = monthlyTotal >= 0 ? '#28a745' : '#dc3545';
+    // 他の関数はそのまま
+    function updateUI() {
+        document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
 
-    updateStats(); // 統計パネルも再計算
-}
+        const select = document.getElementById('accountSelector');
+        const selectedId = (select && select.value) ? select.value : 'all';
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.style.background = 'transparent'; 
+            grid.appendChild(cell);
+        }
+
+        let monthlyTotal = 0;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+            let dailyTotal = 0;
+
+            if (selectedId === 'all') {
+                allAccountIds.forEach(id => {
+                    // フィルタなしで全合計
+                    dailyTotal += getDailyProfit(id, dateStr);
+                });
+            } else {
+                dailyTotal = getDailyProfit(selectedId, dateStr);
+            }
+            monthlyTotal += dailyTotal;
+            grid.appendChild(createCell(d, dailyTotal));
+        }
+        document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
+        updateStats();
+    }
 
     function updateStats() {
         let totalBal = 0;
@@ -256,38 +256,35 @@ function updateUI() {
         const breakdownList = document.getElementById('monthlyBreakdownList');
         if (breakdownList) breakdownList.innerHTML = '';
         
-        let hasData = false;
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
         const selectedId = document.getElementById('accountSelector').value || 'all';
         const targetIds = (selectedId === 'all') ? allAccountIds : [selectedId];
 
+        let hasData = false;
+
         targetIds.forEach(id => {
             const s = accountSettings[id] || {};
-            const modeMatch = (currentType === 'Real' && s.trade_mode !== 'Demo') || (currentType === 'Demo' && s.trade_mode === 'Demo');
-            
-            if ((!s.isHidden || selectedId !== 'all') && modeMatch) {
-                if(accountsData[id]) {
-                    const p = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
-                    totalProfitAll += p;
-                    totalBal += (accountsData[id].balance || 0);
-                }
-                totalDepositAll += (s.total_deposit || 0);
+            // フィルタなしで集計
+            if(accountsData[id]) {
+                const p = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
+                totalProfitAll += p;
+                totalBal += (accountsData[id].balance || 0);
+            }
+            totalDepositAll += (s.total_deposit || 0);
 
-                let monthProfit = 0;
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-                    monthProfit += getDailyProfit(id, dateStr);
-                }
-                totalMonthlyProfit += monthProfit;
+            let monthProfit = 0;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+                monthProfit += getDailyProfit(id, dateStr);
+            }
+            totalMonthlyProfit += monthProfit;
 
-                if (breakdownList && selectedId === 'all') {
-                    const row = document.createElement('div');
-                    row.className = 'bd-row';
-                    row.innerHTML = `<span class="bd-name">${s.name || id}</span><span class="bd-val">${monthProfit.toLocaleString()}</span>`;
-                    breakdownList.appendChild(row);
-                    hasData = true;
-                }
+            if (breakdownList && selectedId === 'all') {
+                const row = document.createElement('div');
+                row.className = 'bd-row';
+                row.innerHTML = `<span class="bd-name">${s.name || id}</span><span class="bd-val">${monthProfit.toLocaleString()}</span>`;
+                breakdownList.appendChild(row);
+                hasData = true;
             }
         });
 
@@ -295,7 +292,6 @@ function updateUI() {
         document.getElementById('totalBalance').textContent = totalBal.toLocaleString();
         document.getElementById('totalProfitAllTime').textContent = (totalProfitAll >= 0 ? "+" : "") + totalProfitAll.toLocaleString();
         
-        // ★ ％の計算 (Gain)
         const gainEl = document.getElementById('totalGainPct');
         const monthlyGainEl = document.getElementById('monthlyGain');
         
@@ -325,40 +321,12 @@ function updateUI() {
         if (!accountsData[id]) return 0;
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
-
-    function updateDropdown() {
-        const select = document.getElementById('accountSelector');
-        const listContainer = document.getElementById('idListContainer');
-        if (!select || !listContainer) return;
-
-        const currentVal = select.value;
-        select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`;
-        listContainer.innerHTML = '';
-
-        allAccountIds.forEach(id => {
-            const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
-            const modeMatch = (currentType === 'Real' && s.trade_mode !== 'Demo') || (currentType === 'Demo' && s.trade_mode === 'Demo');
-
-            if (modeMatch) {
-                if (!s.isHidden) {
-                    const option = document.createElement('option');
-                    option.value = id; option.textContent = s.name || id;
-                    select.appendChild(option);
-                }
-                const row = document.createElement('div');
-                row.className = 'bd-row';
-                row.innerHTML = `<span>${id}</span><input type="text" id="name-${id}" value="${s.name || ''}" style="width:100px;">`;
-                listContainer.appendChild(row);
-            }
-        });
-        select.value = "all";
-    }
-
+    
     function switchType(type) {
         currentType = type;
         document.getElementById('btnReal').classList.toggle('active', type === 'Real');
         document.getElementById('btnDemo').classList.toggle('active', type === 'Demo');
-        updateDropdown();
+        // 今回はフィルタしないのでUI更新のみ
         updateUI();
     }
     
@@ -368,10 +336,8 @@ function updateUI() {
         if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         updateUI();
     }
-
-    function openSettings() { /* モーダル処理 */ }
+    
+    function openSettings() { /* 設定画面 */ }
 </script>
 </body>
 </html>
-
-
