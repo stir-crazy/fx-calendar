@@ -65,6 +65,7 @@
     </header>
 
     <div class="padded-section" style="padding-top:20px;">
+        
         <div class="currency-control-row">
             <div class="currency-switch">
                 <button class="curr-btn active" id="currBtnJPY" onclick="setCurrency('JPY')">JPY</button>
@@ -260,8 +261,10 @@
         else amountInJPY = amount; 
 
         if (displayMode === 'JPY') {
+            // JPY表示
             return { val: Math.floor(amountInJPY), unit: 'JPY', decimals: 0 };
         } else {
+            // Native/USD表示
             if (isAllMode) {
                 // ALL: USD換算
                 return { 
@@ -272,17 +275,19 @@
             } else {
                 // 個別: Native
                 if (fromCurrency === 'JPY') {
-                    // JPY口座はUSD表示
+                    // JPY口座なら USD表示
                     return { 
                         val: parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2)), 
                         unit: 'USD', 
                         decimals: 2 
                     };
                 } else {
-                    // USD/USCはそのまま。USCは整数(0桁)に設定変更！
+                    // USD or USC
                     let decimals = 0; 
                     if (fromCurrency === 'USD') decimals = 2;
                     else if (fromCurrency === 'USC') decimals = 0; // ★ USCは整数(カンマなし)
+                    // 注: ここでdecimalsを決めるが、カレンダー用にはフォーマット済み文字列を渡すわけではない。
+                    // 呼び出し側で toLocaleString() しないように注意するか、decimals=0 なら整数表示される。
                     
                     return { val: amount, unit: fromCurrency, decimals: decimals };
                 }
@@ -354,11 +359,18 @@
         const selectedId = (select && select.value) ? select.value : 'all';
         const isIndividual = selectedId !== 'all'; 
 
+        // ボタンテキスト更新
         const btnNative = document.getElementById('currBtnNative');
         if (isIndividual) {
             const s = accountSettings[selectedId] || {};
             const curr = s.currency || "JPY";
-            btnNative.textContent = (curr === 'JPY') ? "USD" : "Native";
+            if (curr === 'JPY') {
+                btnNative.textContent = "USD";
+            } else if (curr === 'USC') {
+                btnNative.textContent = "USC";
+            } else {
+                btnNative.textContent = "USD";
+            }
         } else {
             btnNative.textContent = "USD";
         }
@@ -429,6 +441,7 @@
             const absVal = Math.abs(amount);
             
             // toFixedでカンマを除去して指定桁数に
+            // decimals=0なら整数、decimals=2なら少数2桁
             const valStr = absVal.toFixed(decimals);
             
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
@@ -510,6 +523,15 @@
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
         // 統計エリアはカンマありで表示（見やすさ優先）
+        // ただし USC の場合はカンマあり小数2桁 (108,155.05) にしたいので、statDecimalsを調整
+        // getDisplayValueでUSCのdecimalsを0にしてしまっているが、統計エリアは2桁欲しいかもしれない？
+        // いや、USC=1000円感覚なら整数でいいのか。
+        // もしUSCでも詳細見たければ2桁にするが、カレンダーに合わせて整数にしておきます。
+        // -> ご要望「セントのエクスネスみると108155.05 uscって表示だね」より、USCは小数2桁が正しい。
+        
+        // ★ 修正: 統計エリアのUSCは小数2桁にする
+        if (statUnit === 'USC') statDecimals = 2; 
+
         const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: statDecimals, maximumFractionDigits: statDecimals });
         
         document.getElementById('totalBalance').innerHTML = `${fmt(totalBal)} <span style="font-size:12px; color:var(--text-dim);">${statUnit}</span>`;
