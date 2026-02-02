@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 基本レイアウト */
+/* 既存のスタイル */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
@@ -15,23 +15,15 @@
 .cell:nth-child(7n) { border-right: none; }
 .cell-date { font-size: 10px; color: var(--text-dim); align-self: flex-start; margin-left: 4px; margin-top: 4px; position:absolute; top:0; left:0; }
 .cell-value { font-size: 10px; font-weight: bold; text-align: center; width: 100%; line-height: 1.1; word-break: break-all; white-space: normal; margin-top: 10px; }
-
-/* 編集可能なセルのスタイル */
 .cell.editable { cursor: pointer; }
 .cell.editable:hover { background: rgba(255, 255, 255, 0.05); }
-
-/* 曜日ヘッダー */
 .day-header-row { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; margin-bottom: 5px; text-align: center; }
 .day-header { font-size: 9px; font-weight: bold; color: var(--text-dim); }
-
-/* リスト・統計 */
 .bd-box { margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .bd-header { background: var(--bg-color); padding: 8px 10px; font-size: 11px; font-weight: bold; color: var(--text-dim); border-bottom: 1px solid var(--border); }
 .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .bd-row:last-child { border-bottom: none; }
 .bd-name { color: var(--text-main); font-weight: bold; }
-
-/* 設定・編集画面UI */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: flex; justify-content: center; align-items: center; }
 .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; border: 1px solid var(--border); color: var(--text-main); }
 .setting-row { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -42,6 +34,11 @@
 .icon-btn.active { color: var(--accent-blue); }
 .icon-btn.delete:hover { color: #ff6b6b; }
 .svg-icon { width: 18px; height: 18px; fill: currentColor; }
+
+/* Resetボタンのスタイル */
+.reset-btn { width: 30%; padding: 12px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); border-radius: 4px; font-weight: bold; cursor: pointer; }
+.reset-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+.update-btn { width: 68%; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -145,7 +142,10 @@
             <div id="editDateLabel" style="color:var(--text-dim); font-size:12px; margin-bottom:5px;">Date: ----.--.--</div>
             <input type="number" id="editProfitInput" class="setting-input" placeholder="Enter profit amount" style="width:100%;">
         </div>
-        <button onclick="saveProfitEdit()" style="width:100%; padding:12px; background:var(--accent-blue); color:white; border:none; border-radius:4px; font-weight:bold;">Update Profit</button>
+        <div style="display:flex; justify-content:space-between; gap:10px;">
+            <button onclick="resetDailyProfit()" class="reset-btn">Reset</button>
+            <button onclick="saveProfitEdit()" class="update-btn">Update Profit</button>
+        </div>
     </div>
 </div>
 
@@ -163,7 +163,7 @@
     let allAccountIds = [];
     let accountSettings = {}; 
     let currentType = 'Real';
-    let editingDate = null; // 編集中の日付を保持
+    let editingDate = null; 
 
     window.onload = () => {
         const savedTheme = localStorage.getItem('selected_theme');
@@ -242,7 +242,7 @@
         grid.innerHTML = '';
         const select = document.getElementById('accountSelector');
         const selectedId = (select && select.value) ? select.value : 'all';
-        const isIndividual = selectedId !== 'all'; // 個別ID選択中かどうか
+        const isIndividual = selectedId !== 'all'; 
 
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -263,7 +263,6 @@
                 });
             }
             monthlyTotal += dailyTotal;
-            // 個別ID選択時のみ編集可能にする
             grid.appendChild(createCell(d, dailyTotal, false, isIndividual, dateStr, dailyTotal));
         }
         document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
@@ -278,7 +277,6 @@
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${amount.toLocaleString()}</div>`; }
         
-        // 編集機能の追加
         if (isEditable) {
             div.classList.add('editable');
             div.onclick = () => openEditProfit(dateStr, currentVal);
@@ -286,7 +284,6 @@
         return div;
     }
 
-    // 利益編集モーダルを開く
     function openEditProfit(dateStr, currentVal) {
         editingDate = dateStr;
         document.getElementById('editDateLabel').textContent = `Date: ${dateStr}`;
@@ -304,7 +301,6 @@
         const select = document.getElementById('accountSelector');
         const accountId = select.value;
         const newVal = document.getElementById('editProfitInput').value;
-        
         if (!editingDate || accountId === 'all') return;
 
         try {
@@ -312,17 +308,33 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    update_profit: { // Workersに追加したコマンド
-                        account_id: accountId,
-                        date: editingDate,
-                        amount: newVal
-                    }
+                    update_profit: { account_id: accountId, date: editingDate, amount: newVal }
                 })
             });
-            // データを再取得して更新
             await fetchAllData();
             closeEditProfit();
         } catch(e) { alert("更新エラー"); }
+    }
+
+    // ★ リセット処理（新規追加）
+    async function resetDailyProfit() {
+        const select = document.getElementById('accountSelector');
+        const accountId = select.value;
+        
+        if (!editingDate || accountId === 'all') return;
+        if (!confirm(`${editingDate} のデータをリセットしますか？\n（リセット後は0になりますが、次回EA同期時に元に戻ります）`)) return;
+
+        try {
+            await fetch(BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    reset_daily_profit: { account_id: accountId, date: editingDate }
+                })
+            });
+            await fetchAllData();
+            closeEditProfit();
+        } catch(e) { alert("リセットエラー"); }
     }
 
     function getDailyProfit(id, dateStr) {
@@ -330,7 +342,7 @@
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
     
-    // ... (設定画面などの既存関数はそのまま) ...
+    // ... (設定画面などの既存関数) ...
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
