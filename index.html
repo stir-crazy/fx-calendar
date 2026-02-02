@@ -7,28 +7,37 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 基本スタイル */
+/* 基本レイアウト */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-/* カレンダーグリッド */
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
 .cell { aspect-ratio: 0.9; background: var(--card-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; position: relative; }
 .cell:nth-child(7n) { border-right: none; }
 .cell-date { font-size: 10px; color: var(--text-dim); align-self: flex-start; margin-left: 4px; margin-top: 4px; position:absolute; top:0; left:0; }
 .cell-value { font-size: 10px; font-weight: bold; text-align: center; width: 100%; line-height: 1.1; word-break: break-all; white-space: normal; margin-top: 10px; }
-/* 曜日ヘッダーの追加スタイル */
+
+/* 曜日ヘッダー */
 .day-header-row { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; margin-bottom: 5px; text-align: center; }
 .day-header { font-size: 9px; font-weight: bold; color: var(--text-dim); }
 
+/* リスト・統計 */
 .bd-box { margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .bd-header { background: var(--bg-color); padding: 8px 10px; font-size: 11px; font-weight: bold; color: var(--text-dim); border-bottom: 1px solid var(--border); }
 .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
 .bd-row:last-child { border-bottom: none; }
 .bd-name { color: var(--text-main); font-weight: bold; }
-/* 設定画面用 */
+
+/* 設定画面UI（アイコン対応） */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: flex; justify-content: center; align-items: center; }
 .modal-content { background: var(--card-bg); padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; border: 1px solid var(--border); color: var(--text-main); }
-.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.setting-row { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.setting-controls { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+.setting-input { flex: 1; padding: 8px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; font-size: 14px; }
+.icon-btn { background: none; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: 0.2s; }
+.icon-btn:hover { color: var(--text-main); }
+.icon-btn.active { color: var(--accent-blue); }
+.icon-btn.delete:hover { color: #ff6b6b; }
+.svg-icon { width: 18px; height: 18px; fill: currentColor; }
 </style>
 </head>
 <body>
@@ -58,7 +67,6 @@
             <div id="dateInfo">---- / --</div>
             <button onclick="changeMonth(1)">＞</button>
         </div>
-        
         <div class="day-header-row">
             <span class="day-header" style="color:#ff6b6b">SUN</span>
             <span class="day-header">MON</span>
@@ -68,7 +76,6 @@
             <span class="day-header">FRI</span>
             <span class="day-header" style="color:#4dabf7">SAT</span>
         </div>
-
         <div class="grid" id="calendarGrid"></div>
     </div>
 
@@ -77,7 +84,6 @@
             <div class="bd-header">MONTHLY BREAKDOWN</div>
             <div id="monthlyBreakdownList"></div>
         </div>
-
         <div class="stats-container">
             <div class="stat-panel card-style">
                 <span style="font-size:9px; color:var(--text-dim);">MONTHLY PROFIT</span>
@@ -88,7 +94,6 @@
                 <div><span class="main-val" id="monthlyGain">-- %</span></div>
             </div>
         </div>
-
         <div class="details-container">
             <div class="section-header">TOTAL PORTFOLIO STATISTICS</div>
             <div class="total-stats-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -106,36 +111,34 @@
                 <div class="ts-value" id="totalBalance" style="color:#ffd700;">0</div>
             </div>
         </div>
-
-        <footer class="global-footer">
-            Last Update: <span id="lastTime">--:--:--</span>
-        </footer>
+        <footer class="global-footer">Last Update: <span id="lastTime">--:--:--</span></footer>
     </div>
 </div>
 
 <div class="modal-overlay" id="settingsModal" style="display:none;">
     <div class="modal-content">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
             <span style="font-weight:bold;">Account Settings</span>
-            <button onclick="closeSettings()" style="background:none; border:none; color:var(--text-dim); font-size:18px;">✕</button>
+            <button onclick="closeSettings()" style="background:none; border:none; color:var(--text-dim); font-size:20px;">✕</button>
         </div>
-        
         <div style="text-align:center; margin-bottom:15px;">
-            <div style="font-size:10px; color:var(--text-dim); margin-bottom:5px;">THEME</div>
             <button onclick="changeTheme('cyber')" style="background:#0f1923; width:20px; height:20px; border:1px solid #555;"></button>
             <button onclick="changeTheme('light')" style="background:#fff; width:20px; height:20px; border:1px solid #ccc;"></button>
             <button onclick="changeTheme('midnight')" style="background:#191970; width:20px; height:20px; border:1px solid #555;"></button>
         </div>
-
         <div id="idListContainer" style="max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
-        
-        <button onclick="saveAndClose()" style="width:100%; padding:10px; background:var(--accent-blue); color:white; border:none; border-radius:4px;">Save & Apply</button>
+        <button onclick="saveAndClose()" style="width:100%; padding:12px; background:var(--accent-blue); color:white; border:none; border-radius:4px; font-weight:bold;">Save Changes</button>
     </div>
 </div>
 
 <script>
-    // ★★★ WorkersのURLをここに入れてください ★★★
+    // ★★★ WorkersのURL ★★★
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
+
+    // SVG Icons
+    const ICON_EYE_OPEN = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+    const ICON_EYE_SLASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.83 9L15 12.17V12a3 3 0 00-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L2.1 19l1.41 1.41L20.59 3.41 19.17 2l-3.66 3.66C14.44 5.23 13.26 5 12 5 7 5 2.73 8.11 1 12.5c1.24 3.15 3.73 5.61 6.86 6.55.51.15 1.01.24 1.52.24.84 0 1.65-.24 2.37-.62l.1.1.26.26-.01-.03zM12 7c.27 0 .52.04.77.09L10.1 9.76c.04-.25.09-.5.09-.76 0-1.66 1.34-3 3-3z"/></svg>`;
+    const ICON_TRASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
@@ -172,7 +175,6 @@
                     };
                 });
             }
-
             if (data.profits) {
                 data.profits.forEach(item => {
                     const id = String(item.account_id);
@@ -190,19 +192,15 @@
                     }
                 });
             }
-
             document.getElementById('lastTime').textContent = new Date().toLocaleTimeString();
             updateDropdown();
             updateUI();
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     }
 
     function updateDropdown() {
         const select = document.getElementById('accountSelector');
         if (!select) return;
-
         const currentVal = select.value;
         select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`;
 
@@ -210,7 +208,6 @@
             const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
             const isDemoAccount = (s.trade_mode === 'Demo');
             const isTargetDemo = (currentType === 'Demo');
-
             if (isDemoAccount === isTargetDemo && !s.isHidden) {
                 const option = document.createElement('option');
                 option.value = id;
@@ -218,14 +215,11 @@
                 select.appendChild(option);
             }
         });
-
-        if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
-            select.value = currentVal;
-        } else {
-            select.value = "all";
-        }
+        if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) { select.value = currentVal; } 
+        else { select.value = "all"; }
     }
 
+    // ★ 設定画面の描画（アイコンUI）
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
@@ -239,14 +233,26 @@
             if (isDemoAccount === isTargetDemo) {
                 const div = document.createElement('div');
                 div.className = 'setting-row';
+                
+                // 目のアイコン（開/閉）
+                const eyeIcon = s.isHidden ? ICON_EYE_SLASH : ICON_EYE_OPEN;
+                const eyeClass = s.isHidden ? '' : 'active';
+                const eyeOpacity = s.isHidden ? '0.5' : '1';
+
                 div.innerHTML = `
-                    <div style="flex:1;">
-                        <div style="font-size:10px; color:var(--text-dim);">${id}</div>
-                        <input type="text" id="name-${id}" value="${s.name}" placeholder="Name" style="width:100%; padding:5px; margin-top:5px; background:var(--bg-grid); border:1px solid var(--border); color:var(--text-main);">
+                    <div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">${id}</div>
+                    <div class="setting-controls">
+                        <input type="text" class="setting-input" id="name-${id}" value="${s.name}" placeholder="Account Name">
+                        
+                        <button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')" title="Toggle Visibility">
+                            ${eyeIcon}
+                        </button>
+                        
+                        <button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')" title="Delete Account">
+                            ${ICON_TRASH}
+                        </button>
                     </div>
-                    <div style="margin-left:10px;">
-                        <label style="font-size:11px;"><input type="checkbox" id="hide-${id}" ${s.isHidden ? 'checked' : ''}> Hide</label>
-                    </div>
+                    <input type="hidden" id="hide-val-${id}" value="${s.isHidden ? '1' : '0'}">
                 `;
                 container.appendChild(div);
             }
@@ -254,24 +260,56 @@
         modal.style.display = 'flex';
     }
 
-    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-    
-    function changeTheme(theme) {
-        document.body.className = theme;
-        localStorage.setItem('selected_theme', theme);
+    // 目のアイコン切り替え処理
+    function toggleHide(btn, id) {
+        const inputVal = document.getElementById(`hide-val-${id}`);
+        const isHidden = inputVal.value === '1';
+        
+        // 反転させる
+        if (isHidden) {
+            inputVal.value = '0';
+            btn.innerHTML = ICON_EYE_OPEN;
+            btn.classList.add('active');
+            btn.style.opacity = '1';
+        } else {
+            inputVal.value = '1';
+            btn.innerHTML = ICON_EYE_SLASH;
+            btn.classList.remove('active');
+            btn.style.opacity = '0.5';
+        }
     }
+
+    // アカウント削除処理
+    async function deleteAccount(id) {
+        if (!confirm(`Are you sure you want to delete account ${id}? This cannot be undone.`)) return;
+        
+        try {
+            await fetch(BASE_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delete_account: id }) // Workersに追加した削除コマンド
+            });
+            // リストから即座に削除して再描画
+            allAccountIds = allAccountIds.filter(aid => aid !== id);
+            openSettings(); // 設定画面を更新
+            updateDropdown();
+            updateUI();
+        } catch(e) { alert("削除エラーが発生しました"); }
+    }
+
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
 
     async function saveAndClose() {
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
-            const hideInput = document.getElementById(`hide-${id}`);
-            if (nameInput) {
+            const hideVal = document.getElementById(`hide-val-${id}`);
+            if (nameInput && hideVal) {
                 if (!accountSettings[id]) accountSettings[id] = {};
                 accountSettings[id].name = nameInput.value;
-                accountSettings[id].isHidden = hideInput.checked;
+                accountSettings[id].isHidden = (hideVal.value === '1');
             }
         });
-
         try {
             await fetch(BASE_URL, {
                 method: 'POST',
@@ -291,17 +329,14 @@
         updateDropdown();
         updateUI();
     }
-
     function updateUI() {
         document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
         const select = document.getElementById('accountSelector');
         const selectedId = (select && select.value) ? select.value : 'all';
-
         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
         for (let i = 0; i < firstDay; i++) grid.appendChild(createCell(i, 0, true));
 
         let monthlyTotal = 0;
@@ -313,53 +348,39 @@
                     const s = accountSettings[id] || {};
                     const isDemoAccount = (s.trade_mode === 'Demo');
                     const isTargetDemo = (currentType === 'Demo');
-                    if (!s.isHidden && isDemoAccount === isTargetDemo) {
-                        dailyTotal += getDailyProfit(id, dateStr);
-                    }
+                    if (!s.isHidden && isDemoAccount === isTargetDemo) { dailyTotal += getDailyProfit(id, dateStr); }
                 });
-            } else {
-                dailyTotal = getDailyProfit(selectedId, dateStr);
-            }
+            } else { dailyTotal = getDailyProfit(selectedId, dateStr); }
             monthlyTotal += dailyTotal;
             grid.appendChild(createCell(d, dailyTotal));
         }
-
         document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
         updateStats();
     }
-
     function createCell(day, amount, isEmpty=false) {
         const div = document.createElement('div');
         div.className = 'cell';
         if(isEmpty) { div.style.background='transparent'; return div; }
-        
         div.innerHTML = `<div class="cell-date">${day}</div>`;
-        if (amount !== 0) {
-            div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${amount.toLocaleString()}</div>`;
-        }
+        if (amount !== 0) { div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${amount.toLocaleString()}</div>`; }
         return div;
     }
-
     function getDailyProfit(id, dateStr) {
         if (!accountsData[id]) return 0;
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
-
     function updateStats() {
         let totalBal = 0, totalProfitAll = 0, totalMonthlyProfit = 0, totalDepositAll = 0;
         const breakdownList = document.getElementById('monthlyBreakdownList');
         if (breakdownList) breakdownList.innerHTML = '';
-        
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const selectedId = document.getElementById('accountSelector').value || 'all';
         const targetIds = (selectedId === 'all') ? allAccountIds : [selectedId];
         let hasData = false;
-
         targetIds.forEach(id => {
             const s = accountSettings[id] || {};
             const isDemoAccount = (s.trade_mode === 'Demo');
             const isTargetDemo = (currentType === 'Demo');
-
             if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) {
                 if(accountsData[id]) {
                     const p = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
@@ -367,14 +388,12 @@
                     totalBal += (accountsData[id].balance || 0);
                 }
                 totalDepositAll += (s.total_deposit || 0);
-
                 let monthProfit = 0;
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
                     monthProfit += getDailyProfit(id, dateStr);
                 }
                 totalMonthlyProfit += monthProfit;
-
                 if (breakdownList && selectedId === 'all') {
                     const row = document.createElement('div');
                     row.className = 'bd-row';
@@ -384,14 +403,11 @@
                 }
             }
         });
-        
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         document.getElementById('totalBalance').textContent = totalBal.toLocaleString();
         document.getElementById('totalProfitAllTime').textContent = (totalProfitAll >= 0 ? "+" : "") + totalProfitAll.toLocaleString();
-        
         const gainEl = document.getElementById('totalGainPct');
         const monthlyGainEl = document.getElementById('monthlyGain');
-        
         if (totalDepositAll > 0) {
             const gain = (totalProfitAll / totalDepositAll) * 100;
             gainEl.textContent = (gain >= 0 ? "+" : "") + gain.toFixed(2) + " %";
@@ -402,7 +418,6 @@
             } else { monthlyGainEl.textContent = "-- %"; }
         } else { gainEl.textContent = "-- %"; monthlyGainEl.textContent = "-- %"; }
     }
-    
     function changeMonth(step) {
         currentMonth += step;
         if (currentMonth > 11) { currentMonth = 0; currentYear++; }
