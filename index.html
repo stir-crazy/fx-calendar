@@ -37,6 +37,12 @@
 .reset-btn { width: 30%; padding: 12px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); border-radius: 4px; font-weight: bold; cursor: pointer; }
 .reset-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
 .update-btn { width: 68%; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+/* 内訳リストのスタイル */
+.detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.detail-info { flex: 1; }
+.detail-name { font-weight: bold; font-size: 13px; color: var(--text-main); }
+.detail-val { font-family: monospace; font-weight: bold; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -130,6 +136,16 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="dailyDetailsModal" style="display:none;">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+            <span style="font-weight:bold;" id="detailsDateLabel">Date Details</span>
+            <button onclick="closeDailyDetails()" style="background:none; border:none; color:var(--text-dim); font-size:20px;">✕</button>
+        </div>
+        <div id="dailyDetailsList" style="max-height:300px; overflow-y:auto; margin-bottom:10px;"></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="editProfitModal" style="display:none;">
     <div class="modal-content">
         <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
@@ -154,6 +170,7 @@
     const ICON_EYE_OPEN = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
     const ICON_EYE_SLASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.83 9L15 12.17V12a3 3 0 00-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L2.1 19l1.41 1.41L20.59 3.41 19.17 2l-3.66 3.66C14.44 5.23 13.26 5 12 5 7 5 2.73 8.11 1 12.5c1.24 3.15 3.73 5.61 6.86 6.55.51.15 1.01.24 1.52.24.84 0 1.65-.24 2.37-.62l.1.1.26.26-.01-.03zM12 7c.27 0 .52.04.77.09L10.1 9.76c.04-.25.09-.5.09-.76 0-1.66 1.34-3 3-3z"/></svg>`;
     const ICON_TRASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+    const ICON_EDIT = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
@@ -162,7 +179,8 @@
     let accountSettings = {}; 
     let currentType = 'Real';
     let editingDate = null; 
-    let initialModalValue = 0; // ★ 開いたときの数値を覚えておく変数
+    let editingAccountId = null; // ★ 編集中の口座IDを保持する変数
+    let initialModalValue = 0;
 
     window.onload = () => {
         const savedTheme = localStorage.getItem('selected_theme');
@@ -262,13 +280,14 @@
                 });
             }
             monthlyTotal += dailyTotal;
-            grid.appendChild(createCell(d, dailyTotal, false, isIndividual, dateStr, dailyTotal));
+            // ALLでも個別でもクリック可能に
+            grid.appendChild(createCell(d, dailyTotal, false, true, dateStr, dailyTotal, isIndividual ? selectedId : 'all'));
         }
         document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
         updateStats();
     }
 
-    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', currentVal=0) {
+    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', currentVal=0, viewMode='all') {
         const div = document.createElement('div');
         div.className = 'cell';
         if(isEmpty) { div.style.background='transparent'; return div; }
@@ -278,47 +297,94 @@
         
         if (isEditable) {
             div.classList.add('editable');
-            div.onclick = () => openEditProfit(dateStr, currentVal);
+            if (viewMode === 'all') {
+                // ALLモードなら内訳リストを開く
+                div.onclick = () => openDailyDetails(dateStr);
+            } else {
+                // 個別モードなら直接編集
+                div.onclick = () => openEditProfit(dateStr, currentVal, viewMode);
+            }
         }
         return div;
     }
 
-    function openEditProfit(dateStr, currentVal) {
+    // ★ ALLモード用の日別詳細モーダル
+    function openDailyDetails(dateStr) {
+        document.getElementById('detailsDateLabel').textContent = `Details: ${dateStr}`;
+        const list = document.getElementById('dailyDetailsList');
+        list.innerHTML = '';
+
+        allAccountIds.forEach(id => {
+            const s = accountSettings[id] || {};
+            const isDemoAccount = (s.trade_mode === 'Demo');
+            const isTargetDemo = (currentType === 'Demo');
+
+            // 表示対象の口座のみリストアップ
+            if (!s.isHidden && isDemoAccount === isTargetDemo) {
+                const profit = getDailyProfit(id, dateStr);
+                const color = profit >= 0 ? '#28a745' : '#dc3545';
+                
+                const div = document.createElement('div');
+                div.className = 'detail-row';
+                div.innerHTML = `
+                    <div class="detail-info">
+                        <div class="detail-name">${s.name || id}</div>
+                        <div class="detail-val" style="color:${color}">${profit > 0 ? '+' : ''}${profit.toLocaleString()}</div>
+                    </div>
+                    <button class="icon-btn" onclick="openEditProfit('${dateStr}', ${profit}, '${id}')" title="Edit">
+                        ${ICON_EDIT}
+                    </button>
+                `;
+                list.appendChild(div);
+            }
+        });
+        document.getElementById('dailyDetailsModal').style.display = 'flex';
+    }
+
+    function closeDailyDetails() { document.getElementById('dailyDetailsModal').style.display = 'none'; }
+
+    // 編集モーダルを開く（IDを受け取るように拡張）
+    function openEditProfit(dateStr, currentVal, accountId) {
         editingDate = dateStr;
-        initialModalValue = currentVal; // ★ ここで「開いた瞬間の値」を覚える！
-        document.getElementById('editDateLabel').textContent = `Date: ${dateStr}`;
+        editingAccountId = accountId; // ★ IDを保存
+        initialModalValue = currentVal;
+        
+        document.getElementById('editDateLabel').textContent = `Date: ${dateStr} (${accountSettings[accountId]?.name || accountId})`;
         document.getElementById('editProfitInput').value = currentVal;
+        
+        // 内訳モーダルが開いていたら一時的に閉じる（または裏に残す）
+        // ここでは内訳モーダルの上に重ねて表示されます
         document.getElementById('editProfitModal').style.display = 'flex';
     }
 
     function closeEditProfit() {
         document.getElementById('editProfitModal').style.display = 'none';
         editingDate = null;
+        editingAccountId = null;
     }
 
-    // ★ JSだけで入力を元に戻す機能
-    function revertInput() {
-        // 覚えておいた値に戻すだけ（サーバー通信なし）
-        document.getElementById('editProfitInput').value = initialModalValue;
-    }
+    function revertInput() { document.getElementById('editProfitInput').value = initialModalValue; }
 
-    // 利益の保存処理（Resetで戻した値もこれで送信すればOK）
     async function saveProfitEdit() {
-        const select = document.getElementById('accountSelector');
-        const accountId = select.value;
         const newVal = document.getElementById('editProfitInput').value;
-        
-        if (!editingDate || accountId === 'all') return;
+        // グローバルのeditingAccountIdを使用
+        if (!editingDate || !editingAccountId) return;
 
         try {
             await fetch(BASE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    update_profit: { account_id: accountId, date: editingDate, amount: newVal }
+                    update_profit: { account_id: editingAccountId, date: editingDate, amount: newVal }
                 })
             });
             await fetchAllData();
+            
+            // 内訳モーダルが開いていたら、リストを更新するために再描画
+            if (document.getElementById('dailyDetailsModal').style.display === 'flex') {
+                openDailyDetails(editingDate);
+            }
+            
             closeEditProfit();
         } catch(e) { alert("更新エラー"); }
     }
@@ -328,7 +394,7 @@
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
     
-    // ... 設定画面などの既存関数 ...
+    // ... 設定系はそのまま ...
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
