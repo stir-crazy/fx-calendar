@@ -10,11 +10,16 @@
 /* 基本スタイル */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+/* カレンダーグリッド */
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
 .cell { aspect-ratio: 0.9; background: var(--card-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; position: relative; }
 .cell:nth-child(7n) { border-right: none; }
 .cell-date { font-size: 10px; color: var(--text-dim); align-self: flex-start; margin-left: 4px; margin-top: 4px; position:absolute; top:0; left:0; }
 .cell-value { font-size: 10px; font-weight: bold; text-align: center; width: 100%; line-height: 1.1; word-break: break-all; white-space: normal; margin-top: 10px; }
+/* 曜日ヘッダーの追加スタイル */
+.day-header-row { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; margin-bottom: 5px; text-align: center; }
+.day-header { font-size: 9px; font-weight: bold; color: var(--text-dim); }
+
 .bd-box { margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .bd-header { background: var(--bg-color); padding: 8px 10px; font-size: 11px; font-weight: bold; color: var(--text-dim); border-bottom: 1px solid var(--border); }
 .bd-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
@@ -53,6 +58,17 @@
             <div id="dateInfo">---- / --</div>
             <button onclick="changeMonth(1)">＞</button>
         </div>
+        
+        <div class="day-header-row">
+            <span class="day-header" style="color:#ff6b6b">SUN</span>
+            <span class="day-header">MON</span>
+            <span class="day-header">TUE</span>
+            <span class="day-header">WED</span>
+            <span class="day-header">THU</span>
+            <span class="day-header">FRI</span>
+            <span class="day-header" style="color:#4dabf7">SAT</span>
+        </div>
+
         <div class="grid" id="calendarGrid"></div>
     </div>
 
@@ -143,7 +159,6 @@
             allAccountIds = [];
             accountSettings = {};
 
-            // 設定データの読み込み（ID確保）
             if (data.settings) {
                 data.settings.forEach(s => {
                     const id = String(s.account_id);
@@ -152,14 +167,12 @@
                         name: s.name || "", 
                         isHidden: s.is_hidden === 1,
                         total_deposit: Number(s.total_deposit) || 0,
-                        // ★ NullならReal扱いにする重要ロジック
                         trade_mode: s.trade_mode || "Real",
                         equity: Number(s.equity) || 0
                     };
                 });
             }
 
-            // 取引データの読み込み
             if (data.profits) {
                 data.profits.forEach(item => {
                     const id = String(item.account_id);
@@ -186,7 +199,6 @@
         }
     }
 
-    // ★ Real/Demoを正しく振り分けるロジック
     function updateDropdown() {
         const select = document.getElementById('accountSelector');
         if (!select) return;
@@ -196,8 +208,6 @@
 
         allAccountIds.forEach(id => {
             const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
-            
-            // trade_modeが 'Demo' ならデモ、それ以外（null含む）はすべてReal
             const isDemoAccount = (s.trade_mode === 'Demo');
             const isTargetDemo = (currentType === 'Demo');
 
@@ -209,7 +219,6 @@
             }
         });
 
-        // 選択復元
         if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
             select.value = currentVal;
         } else {
@@ -217,7 +226,6 @@
         }
     }
 
-    // ★ 設定画面を開くロジック
     function openSettings() {
         const modal = document.getElementById('settingsModal');
         const container = document.getElementById('idListContainer');
@@ -225,7 +233,6 @@
 
         allAccountIds.forEach(id => {
             const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' };
-            // 現在のモードと一致するものだけ設定に表示
             const isDemoAccount = (s.trade_mode === 'Demo');
             const isTargetDemo = (currentType === 'Demo');
 
@@ -258,7 +265,6 @@
         allAccountIds.forEach(id => {
             const nameInput = document.getElementById(`name-${id}`);
             const hideInput = document.getElementById(`hide-${id}`);
-            // 設定画面にあるものだけ更新
             if (nameInput) {
                 if (!accountSettings[id]) accountSettings[id] = {};
                 accountSettings[id].name = nameInput.value;
@@ -266,7 +272,6 @@
             }
         });
 
-        // 設定保存（名前と非表示フラグのみ送信）
         try {
             await fetch(BASE_URL, {
                 method: 'POST',
@@ -287,7 +292,6 @@
         updateUI();
     }
 
-    // UI更新（カレンダー・統計）
     function updateUI() {
         document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
         const grid = document.getElementById('calendarGrid');
@@ -342,7 +346,6 @@
     }
 
     function updateStats() {
-        // 統計計算ロジック（省略せず実装）
         let totalBal = 0, totalProfitAll = 0, totalMonthlyProfit = 0, totalDepositAll = 0;
         const breakdownList = document.getElementById('monthlyBreakdownList');
         if (breakdownList) breakdownList.innerHTML = '';
