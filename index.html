@@ -48,9 +48,8 @@
 .info-table td { text-align: right; color: var(--text-main); padding: 10px 0; font-weight: bold; border-bottom: 1px solid var(--border); }
 .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
 
-/* ★ スイッチのスタイル調整 */
-.currency-control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-/* スイッチだけにするので .rate-display は削除 */
+/* ★ スイッチのスタイル */
+.currency-control-row { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; }
 .currency-switch { display: flex; background: var(--bg-grid); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .curr-btn { padding: 6px 16px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: var(--text-dim); cursor: pointer; transition: 0.2s; }
 .curr-btn.active { background: var(--accent-blue); color: white; }
@@ -67,10 +66,10 @@
 
     <div class="padded-section" style="padding-top:20px;">
         
-        <div class="currency-control-row" style="justify-content: flex-end;">
+        <div class="currency-control-row">
             <div class="currency-switch">
                 <button class="curr-btn active" id="currBtnJPY" onclick="setCurrency('JPY')">JPY</button>
-                <button class="curr-btn" id="currBtnUSD" onclick="setCurrency('USD')">USD</button>
+                <button class="curr-btn" id="currBtnNative" onclick="setCurrency('Native')">USD/Native</button>
             </div>
         </div>
 
@@ -204,7 +203,7 @@
     // ★★★ WorkersのURL ★★★
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
 
-    // アイコン
+    // アイコン定義
     const ICON_EYE_OPEN = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
     const ICON_EYE_SLASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.83 9L15 12.17V12a3 3 0 00-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L2.1 19l1.41 1.41L20.59 3.41 19.17 2l-3.66 3.66C14.44 5.23 13.26 5 12 5 7 5 2.73 8.11 1 12.5c1.24 3.15 3.73 5.61 6.86 6.55.51.15 1.01.24 1.52.24.84 0 1.65-.24 2.37-.62l.1.1.26.26-.01-.03zM12 7c.27 0 .52.04.77.09L10.1 9.76c.04-.25.09-.5.09-.76 0-1.66 1.34-3 3-3z"/></svg>`;
     const ICON_TRASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
@@ -220,7 +219,7 @@
     let editingAccountId = null;
     let initialModalValue = 0;
 
-    let displayCurrency = 'JPY'; 
+    let displayMode = 'JPY'; // 'JPY' or 'Native'
     let exchangeRates = { "JPY": 1, "USD": 150, "USC": 1.5, "EUR": 160 };
 
     window.onload = async () => {
@@ -230,7 +229,7 @@
         await fetchAllData();
     };
 
-    // レート取得＆フッター表示（上部表示は削除）
+    // レート取得＆フッター表示
     async function fetchExchangeRates() {
         try {
             const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=JPY');
@@ -238,7 +237,7 @@
             if (data && data.rates && data.rates.JPY) {
                 const usdJpy = data.rates.JPY;
                 exchangeRates["USD"] = usdJpy;
-                exchangeRates["USC"] = usdJpy / 100; // 1 USC = 1/100 USD
+                exchangeRates["USC"] = usdJpy / 100; 
                 document.getElementById('footerRate').textContent = usdJpy.toFixed(2);
             } else {
                 document.getElementById('footerRate').textContent = exchangeRates.USD.toFixed(2) + " (Def)";
@@ -248,27 +247,46 @@
         }
     }
 
-    function setCurrency(curr) {
-        displayCurrency = curr;
-        document.getElementById('currBtnJPY').classList.toggle('active', curr === 'JPY');
-        document.getElementById('currBtnUSD').classList.toggle('active', curr === 'USD');
+    function setCurrency(mode) {
+        displayMode = mode;
+        document.getElementById('currBtnJPY').classList.toggle('active', mode === 'JPY');
+        document.getElementById('currBtnNative').classList.toggle('active', mode === 'Native');
         updateUI(); 
     }
 
-    function convertToDisplay(amount, fromCurrency) {
+    // ★ 通貨換算＆フォーマットロジック
+    // ALLモード: すべて JPY or USD に換算して合算
+    // 個別モード: Nativeならそのまま、JPYなら換算
+    function getDisplayValue(amount, fromCurrency, isAllMode) {
+        // 1. まずJPYに換算 (基準)
         let amountInJPY = 0;
-        const rateToJPY = exchangeRates[fromCurrency] || 1;
-        
         if (fromCurrency === "USC") {
             amountInJPY = amount * exchangeRates["USC"];
+        } else if (fromCurrency === "USD") {
+            amountInJPY = amount * exchangeRates["USD"];
         } else {
-            amountInJPY = amount * rateToJPY;
+            amountInJPY = amount; // JPY or unknown
         }
 
-        if (displayCurrency === 'JPY') {
-            return Math.floor(amountInJPY);
+        // 2. 出力モードに合わせて変換
+        if (displayMode === 'JPY') {
+            return { val: Math.floor(amountInJPY), unit: 'JPY', decimals: 0 };
         } else {
-            return parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2));
+            // Nativeモード (USD/Nativeボタン)
+            if (isAllMode) {
+                // ALLの時は USD に換算して合算
+                return { 
+                    val: parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2)), 
+                    unit: 'USD', 
+                    decimals: 2 
+                };
+            } else {
+                // 個別の時は「そのまま」
+                // ただしフォーマット(桁数)は通貨による
+                let decimals = 0;
+                if (fromCurrency === 'USD' || fromCurrency === 'USC') decimals = 2;
+                return { val: amount, unit: fromCurrency, decimals: decimals };
+            }
         }
     }
 
@@ -285,7 +303,13 @@
                     const id = String(s.account_id);
                     if (!allAccountIds.includes(id)) allAccountIds.push(id);
                     
-                    // ★ 画像でUSCが確認できたため、EAから送られてくる s.currency をそのまま信じます
+                    // ★ USC判別 (USDかつContractSize=1000)
+                    let detectedCurrency = s.currency || "JPY";
+                    const cSize = Number(s.contract_size) || 0;
+                    if (detectedCurrency === "USD" && cSize === 1000) {
+                        detectedCurrency = "USC";
+                    }
+
                     accountSettings[id] = { 
                         name: s.name || "", 
                         isHidden: s.is_hidden === 1,
@@ -294,9 +318,9 @@
                         equity: Number(s.equity) || 0,
                         broker: s.broker || "Unknown",
                         platform: s.platform || "MT4",
-                        currency: s.currency || "JPY", // そのまま採用
+                        currency: detectedCurrency,
                         leverage: s.leverage || 0,
-                        contract_size: s.contract_size || "-"
+                        contract_size: cSize
                     };
                 });
             }
@@ -323,7 +347,6 @@
         } catch (e) { console.error(e); }
     }
 
-    // UI更新（変更なし）
     function updateUI() {
         document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
         const grid = document.getElementById('calendarGrid');
@@ -336,67 +359,72 @@
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         for (let i = 0; i < firstDay; i++) grid.appendChild(createCell(i, 0, true));
 
-        let monthlyTotalDisplay = 0;
+        // 合計計算用
+        let monthlyTotalVal = 0;
+        let finalUnit = 'JPY';
+        let finalDecimals = 0;
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-            let dailyTotalDisplay = 0;
-            let dailyRaw = 0; 
-            let nativeCurrency = 'JPY'; 
+            
+            // カレンダー表示用
+            let cellDisplayVal = 0;
+            let cellDecimals = 0;
+            let rawVal = 0;         // 編集画面用
+            let nativeCurr = 'JPY'; // 編集画面用
 
             if (isIndividual) {
                 const s = accountSettings[selectedId] || {};
-                dailyRaw = getDailyProfit(selectedId, dateStr);
-                // 個別: そのまま表示（USCならUSCのまま）
-                dailyTotalDisplay = dailyRaw; 
-                nativeCurrency = s.currency || "JPY";
+                nativeCurr = s.currency || "JPY";
+                rawVal = getDailyProfit(selectedId, dateStr);
+                
+                // 変換ロジックを通す
+                const res = getDisplayValue(rawVal, nativeCurr, false);
+                cellDisplayVal = res.val;
+                cellDecimals = res.decimals;
+                finalUnit = res.unit;
+                finalDecimals = res.decimals;
+                
             } else {
+                // ALLモード
                 allAccountIds.forEach(id => {
                     const s = accountSettings[id] || {};
                     const isDemoAccount = (s.trade_mode === 'Demo');
                     const isTargetDemo = (currentType === 'Demo');
                     if (!s.isHidden && isDemoAccount === isTargetDemo) { 
-                        const raw = getDailyProfit(id, dateStr);
-                        // ALL: 換算して合算（USCもここで正しく変換される）
-                        dailyTotalDisplay += convertToDisplay(raw, s.currency || "JPY");
+                        const r = getDailyProfit(id, dateStr);
+                        // ALLモードとして換算して足す
+                        const res = getDisplayValue(r, s.currency || "JPY", true);
+                        cellDisplayVal += res.val;
+                        finalUnit = res.unit;
+                        finalDecimals = res.decimals;
                     }
                 });
             }
 
-            // 合計計算用（個別時のみここで換算）
-            if (isIndividual) {
-                const s = accountSettings[selectedId] || {};
-                monthlyTotalDisplay += convertToDisplay(dailyRaw, s.currency || "JPY");
-            } else {
-                monthlyTotalDisplay += dailyTotalDisplay;
-            }
+            monthlyTotalVal += cellDisplayVal;
             
-            grid.appendChild(createCell(d, dailyTotalDisplay, false, true, dateStr, dailyRaw, isIndividual ? selectedId : 'all', nativeCurrency));
+            grid.appendChild(createCell(d, cellDisplayVal, cellDecimals, false, true, dateStr, rawVal, isIndividual ? selectedId : 'all', nativeCurr));
         }
         
-        const sign = monthlyTotalDisplay > 0 ? "+" : "";
-        const finalVal = monthlyTotalDisplay === 0 ? "0" : sign + monthlyTotalDisplay.toLocaleString();
-        document.getElementById('totalProfit').textContent = finalVal;
-        document.getElementById('monthlyProfitUnit').textContent = displayCurrency;
+        // 月間合計表示
+        const sign = monthlyTotalVal > 0 ? "+" : "";
+        const dispStr = monthlyTotalVal === 0 ? "0" : sign + monthlyTotalVal.toLocaleString(undefined, { minimumFractionDigits: finalDecimals, maximumFractionDigits: finalDecimals });
+        
+        document.getElementById('totalProfit').textContent = dispStr;
+        document.getElementById('monthlyProfitUnit').textContent = finalUnit;
         
         updateStats();
     }
 
-    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', rawVal=0, viewMode='all', currency='JPY') {
+    function createCell(day, amount, decimals, isEmpty=false, isEditable=false, dateStr='', rawVal=0, viewMode='all', currency='JPY') {
         const div = document.createElement('div');
         div.className = 'cell';
         if(isEmpty) { div.style.background='transparent'; return div; }
         
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { 
-            let decimals = 0;
-            if (viewMode === 'all') {
-                decimals = (displayCurrency === 'USD') ? 2 : 0;
-            } else {
-                // 個別表示: USDなら2桁、USCやJPYなら0桁
-                decimals = (currency === 'USD') ? 2 : 0;
-            }
-            const valStr = amount.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+            const valStr = amount.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
         }
         
@@ -413,18 +441,21 @@
 
     // 統計更新
     function updateStats() {
-        let totalBalDisplay = 0;
-        let totalProfitAllDisplay = 0;
-        let totalMonthlyProfitDisplay = 0;
-        let totalDepositAllDisplay = 0; 
-        
+        let totalBal = 0;
+        let totalProfit = 0;
+        let totalMonthly = 0;
+        let totalDeposit = 0; 
+        let statUnit = 'JPY';
+        let statDecimals = 0;
+
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const selectedId = document.getElementById('accountSelector').value || 'all';
+        const isIndividual = selectedId !== 'all';
         const targetIds = (selectedId === 'all') ? allAccountIds : [selectedId];
-        let hasData = false;
         
         const breakdownList = document.getElementById('monthlyBreakdownList');
         if (breakdownList) breakdownList.innerHTML = '';
+        let hasData = false;
 
         targetIds.forEach(id => {
             const s = accountSettings[id] || {};
@@ -433,28 +464,42 @@
             const currency = s.currency || "JPY";
 
             if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) {
+                // 統計計算用の換算 (ALLモード扱い = JPY or USD に統一)
+                // ※統計は常に統一通貨で計算しないと合算できないため、個別モードでもNativeではなく統一通貨で計算する
+                // もしくは個別モードならNativeで表示する？ -> 個別ならNativeでOK
+                
+                const isAll = !isIndividual; // ALLモードかどうか
+                
+                // 全期間利益
                 if(accountsData[id]) {
-                    const rawProfitAll = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
-                    totalProfitAllDisplay += convertToDisplay(rawProfitAll, currency);
-                    totalBalDisplay += convertToDisplay(accountsData[id].balance || 0, currency);
-                }
-                totalDepositAllDisplay += convertToDisplay(s.total_deposit || 0, currency);
+                    const rawP = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
+                    const resP = getDisplayValue(rawP, currency, isAll);
+                    totalProfit += resP.val;
+                    statUnit = resP.unit;
+                    statDecimals = resP.decimals;
 
-                let rawMonthProfit = 0;
+                    const resB = getDisplayValue(accountsData[id].balance || 0, currency, isAll);
+                    totalBal += resB.val;
+                }
+                const resD = getDisplayValue(s.total_deposit || 0, currency, isAll);
+                totalDeposit += resD.val;
+
+                // 月間利益
+                let rawMonth = 0;
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-                    rawMonthProfit += getDailyProfit(id, dateStr);
+                    rawMonth += getDailyProfit(id, dateStr);
                 }
-                const monthDisplay = convertToDisplay(rawMonthProfit, currency);
-                totalMonthlyProfitDisplay += monthDisplay;
+                const resMonth = getDisplayValue(rawMonth, currency, isAll);
+                totalMonthly += resMonth.val;
 
+                // 内訳リスト (ALLの時のみ)
                 if (breakdownList && selectedId === 'all') {
                     const row = document.createElement('div');
                     row.className = 'bd-row';
-                    // ALL表示時の内訳リスト：ここも「換算後」で表示して統一感を出す
                     row.innerHTML = `
                         <span class="bd-name">${s.name || id}</span>
-                        <span class="bd-val">${monthDisplay.toLocaleString()} ${displayCurrency}</span>
+                        <span class="bd-val">${resMonth.val.toLocaleString(undefined, {minimumFractionDigits:resMonth.decimals})} ${resMonth.unit}</span>
                     `;
                     breakdownList.appendChild(row);
                     hasData = true;
@@ -464,25 +509,25 @@
 
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
-        const unit = displayCurrency;
-        const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: unit==='JPY'?0:2, maximumFractionDigits:2 });
+        const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: statDecimals, maximumFractionDigits: statDecimals });
         
-        document.getElementById('totalBalance').textContent = fmt(totalBalDisplay);
-        const allTimeSign = totalProfitAllDisplay > 0 ? "+" : "";
-        document.getElementById('totalProfitAllTime').innerHTML = (totalProfitAllDisplay===0 ? "0" : allTimeSign + fmt(totalProfitAllDisplay));
+        document.getElementById('totalBalance').textContent = fmt(totalBal);
+        const allTimeSign = totalProfit > 0 ? "+" : "";
+        document.getElementById('totalProfitAllTime').innerHTML = (totalProfit===0 ? "0" : allTimeSign + fmt(totalProfit));
 
+        // %計算
         const gainEl = document.getElementById('totalGainPct');
         const monthlyGainEl = document.getElementById('monthlyGain');
 
-        if (totalDepositAllDisplay > 0) {
-            const gain = (totalProfitAllDisplay / totalDepositAllDisplay) * 100;
+        if (totalDeposit > 0) {
+            const gain = (totalProfit / totalDeposit) * 100;
             const gainStr = gain.toFixed(2);
             if(gainStr === "0.00" || gainStr === "-0.00") gainEl.textContent = "0.00 %";
             else gainEl.textContent = (gain > 0 ? "+" : "") + gainStr + " %";
 
-            const mStart = totalBalDisplay - totalMonthlyProfitDisplay;
+            const mStart = totalBal - totalMonthly;
             if (mStart > 0) {
-                const mGain = (totalMonthlyProfitDisplay / mStart) * 100;
+                const mGain = (totalMonthly / mStart) * 100;
                 const mGainStr = mGain.toFixed(2);
                 if(mGainStr === "0.00" || mGainStr === "-0.00") monthlyGainEl.textContent = "0.00 %";
                 else monthlyGainEl.textContent = (mGain > 0 ? "+" : "") + mGainStr + " %";
@@ -509,8 +554,11 @@
                 const rawProfit = getDailyProfit(id, dateStr);
                 const color = rawProfit >= 0 ? '#28a745' : '#dc3545';
                 
-                // ここは「各口座の本来の通貨」で表示する
-                let decimals = (currency === 'USD') ? 2 : 0;
+                // 内訳は「その口座のネイティブ通貨」で表示（個別詳細なので）
+                // ただしUSD/USCなら小数2桁
+                let decimals = 0;
+                if (currency === 'USD' || currency === 'USC') decimals = 2;
+                
                 const valStr = rawProfit.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
 
                 const div = document.createElement('div');
@@ -532,7 +580,6 @@
         document.getElementById('dailyDetailsModal').style.display = 'flex';
     }
 
-    // 編集モーダル
     function openEditProfit(dateStr, currentVal, accountId, currency='JPY') {
         editingDate = dateStr;
         editingAccountId = accountId;
@@ -562,7 +609,7 @@
             const s = accountSettings[accountId] || {};
             const updateTime = document.getElementById('lastTime').textContent;
             
-            // Contract Size が数値ならカンマ区切り、なければハイフン
+            // Contract Size
             const cSizeRaw = Number(s.contract_size);
             const cSize = isNaN(cSizeRaw) || cSizeRaw === 0 ? '-' : cSizeRaw.toLocaleString();
 
@@ -582,7 +629,7 @@
         modal.style.display = 'flex';
     }
 
-    // ... その他の既存関数（変更なし） ...
+    // 共通関数
     function updateDropdown() { const select = document.getElementById('accountSelector'); if (!select) return; const currentVal = select.value; select.innerHTML = `<option value="all">ALL ${currentType.toUpperCase()} ACCOUNTS</option>`; allAccountIds.forEach(id => { const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' }; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if (isDemoAccount === isTargetDemo && !s.isHidden) { const option = document.createElement('option'); option.value = id; option.textContent = s.name ? `${s.name} (${id})` : id; select.appendChild(option); } }); if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) { select.value = currentVal; } else { select.value = "all"; } }
     function closeDailyDetails() { document.getElementById('dailyDetailsModal').style.display = 'none'; }
     function closeEditProfit() { document.getElementById('editProfitModal').style.display = 'none'; editingDate = null; editingAccountId = null; }
