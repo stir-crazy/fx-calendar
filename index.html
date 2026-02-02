@@ -252,39 +252,38 @@
         updateUI(); 
     }
 
-    // ★ 換算関数（ALLは統一、個別はNative/JPY）
+    // ★ 換算関数
     function getDisplayValue(amount, fromCurrency, isAllMode) {
-        // 1. JPYに換算 (基準)
         let amountInJPY = 0;
         if (fromCurrency === "USC") amountInJPY = amount * exchangeRates["USC"];
         else if (fromCurrency === "USD") amountInJPY = amount * exchangeRates["USD"];
         else amountInJPY = amount; 
 
-        // 2. 出力モード変換
         if (displayMode === 'JPY') {
             return { val: Math.floor(amountInJPY), unit: 'JPY', decimals: 0 };
         } else {
-            // 'Native' モード
             if (isAllMode) {
-                // ALLモード: USDに換算して合算
+                // ALL: USD換算
                 return { 
                     val: parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2)), 
                     unit: 'USD', 
                     decimals: 2 
                 };
             } else {
-                // 個別モード
+                // 個別: Native
                 if (fromCurrency === 'JPY') {
-                    // JPY口座なら USD表示
+                    // JPY口座はUSD表示
                     return { 
                         val: parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2)), 
                         unit: 'USD', 
                         decimals: 2 
                     };
                 } else {
-                    // USD/USC口座なら そのまま(Native)表示
-                    let decimals = 0;
-                    if (fromCurrency === 'USD' || fromCurrency === 'USC') decimals = 2;
+                    // USD/USCはそのまま。USCは整数(0桁)に設定変更！
+                    let decimals = 0; 
+                    if (fromCurrency === 'USD') decimals = 2;
+                    else if (fromCurrency === 'USC') decimals = 0; // ★ USCは整数(カンマなし)
+                    
                     return { val: amount, unit: fromCurrency, decimals: decimals };
                 }
             }
@@ -355,7 +354,6 @@
         const selectedId = (select && select.value) ? select.value : 'all';
         const isIndividual = selectedId !== 'all'; 
 
-        // ボタンテキスト更新
         const btnNative = document.getElementById('currBtnNative');
         if (isIndividual) {
             const s = accountSettings[selectedId] || {};
@@ -419,6 +417,7 @@
         updateStats();
     }
 
+    // ★ カレンダーセル生成（カンマなし・符号なし・シンプル化）
     function createCell(day, amount, decimals, isEmpty=false, isEditable=false, dateStr='', rawVal=0, viewMode='all', currency='JPY') {
         const div = document.createElement('div');
         div.className = 'cell';
@@ -426,7 +425,12 @@
         
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { 
-            const valStr = amount.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            // 符号は色で判断するため、絶対値だけを表示
+            const absVal = Math.abs(amount);
+            
+            // toFixedでカンマを除去して指定桁数に
+            const valStr = absVal.toFixed(decimals);
+            
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
         }
         
@@ -441,7 +445,6 @@
         return div;
     }
 
-    // ★ 統計更新（TotalProfit/Balanceにも通貨単位をつける）
     function updateStats() {
         let totalBal = 0;
         let totalProfit = 0;
@@ -466,14 +469,14 @@
             const currency = s.currency || "JPY";
 
             if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) {
-                // 統計もALLなら統一、個別ならNative計算にする
+                // 統計も、個別ならNative表示、ALLなら換算表示
                 const isAllForStats = !isIndividual; 
                 
                 if(accountsData[id]) {
                     const rawP = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
                     const resP = getDisplayValue(rawP, currency, isAllForStats);
                     totalProfit += resP.val;
-                    statUnit = resP.unit; // 単位を取得
+                    statUnit = resP.unit; 
                     statDecimals = resP.decimals;
 
                     const resB = getDisplayValue(accountsData[id].balance || 0, currency, isAllForStats);
@@ -506,9 +509,9 @@
 
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
+        // 統計エリアはカンマありで表示（見やすさ優先）
         const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: statDecimals, maximumFractionDigits: statDecimals });
         
-        // ★ 通貨単位（statUnit）を追加表示
         document.getElementById('totalBalance').innerHTML = `${fmt(totalBal)} <span style="font-size:12px; color:var(--text-dim);">${statUnit}</span>`;
         
         const allTimeSign = totalProfit > 0 ? "+" : "";
@@ -537,7 +540,7 @@
         }
     }
 
-    // --- その他、既存関数（省略なし） ---
+    // ... その他の既存関数（省略なし） ...
     function openDailyDetails(dateStr) { document.getElementById('detailsDateLabel').textContent = `Details: ${dateStr}`; const list = document.getElementById('dailyDetailsList'); list.innerHTML = ''; allAccountIds.forEach(id => { const s = accountSettings[id] || {}; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); const currency = s.currency || "JPY"; if (!s.isHidden && isDemoAccount === isTargetDemo) { const rawProfit = getDailyProfit(id, dateStr); const color = rawProfit >= 0 ? '#28a745' : '#dc3545'; const res = getDisplayValue(rawProfit, currency, false); const valStr = res.val.toLocaleString(undefined, { minimumFractionDigits: res.decimals, maximumFractionDigits: res.decimals }); const div = document.createElement('div'); div.className = 'detail-row'; div.innerHTML = `<div class="detail-info"><div class="detail-name">${s.name || id}</div><div class="detail-val" style="color:${color}">${rawProfit > 0 ? '+' : ''}${valStr} <span style="font-size:10px;">${res.unit}</span></div></div><button class="icon-btn" onclick="openEditProfit('${dateStr}', ${rawProfit}, '${id}', '${currency}')" title="Edit">${ICON_EDIT}</button>`; list.appendChild(div); } }); document.getElementById('dailyDetailsModal').style.display = 'flex'; }
     function openEditProfit(dateStr, currentVal, accountId, currency='JPY') { editingDate = dateStr; editingAccountId = accountId; initialModalValue = currentVal; const accountName = accountSettings[accountId]?.name || accountId; const s = accountSettings[accountId] || {}; const nativeCurrency = s.currency || "JPY"; document.getElementById('editDateLabel').textContent = `Date: ${dateStr} (${accountName})`; const input = document.getElementById('editProfitInput'); input.value = currentVal; input.placeholder = `Amount in ${nativeCurrency}`; document.getElementById('editProfitModal').style.display = 'flex'; }
     function openAccountInfo() { const select = document.getElementById('accountSelector'); const accountId = select.value; const modal = document.getElementById('accountInfoModal'); const content = document.getElementById('infoModalContent'); if (accountId === 'all') { content.innerHTML = '<div style="text-align:center; color:var(--text-dim); padding:20px;">Please select an individual account to view details.</div>'; } else { const s = accountSettings[accountId] || {}; const updateTime = document.getElementById('lastTime').textContent; const cSizeRaw = Number(s.contract_size); const cSize = isNaN(cSizeRaw) || cSizeRaw === 0 ? '-' : cSizeRaw.toLocaleString(); content.innerHTML = `<table class="info-table"><tr><th>ID</th><td><span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span> <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal; margin-left:5px;">(${s.name})</span></td></tr><tr><th>Broker</th><td>${s.broker}</td></tr><tr><th>Type</th><td>${s.trade_mode}</td></tr><tr><th>Platform</th><td>${s.platform}</td></tr><tr><th>Currency</th><td>${s.currency}</td></tr><tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr><tr><th>Contract Size</th><td>${cSize}</td></tr><tr><th>Last Update</th><td>${updateTime}</td></tr></table>`; } modal.style.display = 'flex'; }
