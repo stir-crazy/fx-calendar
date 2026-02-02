@@ -154,46 +154,59 @@
         }
     }
 
-    function updateUI() {
-        document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
+function updateUI() {
+    // 表示している年月を更新
+    document.getElementById('dateInfo').textContent = `${currentYear} / ${currentMonth + 1}`;
+    
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
 
-        const select = document.getElementById('accountSelector');
-        const selectedId = select ? select.value : 'all';
+    const select = document.getElementById('accountSelector');
+    // ★ 修正ポイント: 選択が空(nullや空文字)の場合は 'all' を使うように強制します
+    const selectedId = (select && select.value) ? select.value : 'all';
 
-        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-        for (let i = 0; i < firstDay; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.style.background = 'transparent'; 
-            grid.appendChild(cell);
-        }
-
-        let monthlyTotal = 0;
-
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-            let dailyTotal = 0;
-
-            if (selectedId === 'all') {
-                allAccountIds.forEach(id => {
-                    const s = accountSettings[id] || {};
-                    const modeMatch = (currentType === 'Real' && s.trade_mode !== 'Demo') || (currentType === 'Demo' && s.trade_mode === 'Demo');
-                    if (!s.isHidden && modeMatch) dailyTotal += getDailyProfit(id, dateStr);
-                });
-            } else {
-                dailyTotal = getDailyProfit(selectedId, dateStr);
-            }
-            monthlyTotal += dailyTotal;
-            grid.appendChild(createCell(d, dailyTotal));
-        }
-
-        document.getElementById('totalProfit').textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
-        updateStats();
+    // カレンダーの空白埋め
+    for (let i = 0; i < firstDay; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.background = 'transparent'; 
+        grid.appendChild(cell);
     }
+
+    let monthlyTotal = 0;
+
+    // 1日から末日までループ
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+        let dailyTotal = 0;
+
+        if (selectedId === 'all') {
+            allAccountIds.forEach(id => {
+                const s = accountSettings[id] || {};
+                // モード（Real/Demo）をチェック
+                const modeMatch = (currentType === 'Real' && s.trade_mode !== 'Demo') || (currentType === 'Demo' && s.trade_mode === 'Demo');
+                if (!s.isHidden && modeMatch) {
+                    dailyTotal += getDailyProfit(id, dateStr);
+                }
+            });
+        } else {
+            dailyTotal = getDailyProfit(selectedId, dateStr);
+        }
+
+        monthlyTotal += dailyTotal;
+        grid.appendChild(createCell(d, dailyTotal));
+    }
+
+    // 月間合計利益の表示を更新
+    const profitEl = document.getElementById('totalProfit');
+    profitEl.textContent = (monthlyTotal >= 0 ? "+" : "") + monthlyTotal.toLocaleString();
+    profitEl.style.color = monthlyTotal >= 0 ? '#28a745' : '#dc3545';
+
+    updateStats(); // 統計パネルも再計算
+}
 
     function updateStats() {
         let totalBal = 0;
@@ -321,3 +334,4 @@
 </script>
 </body>
 </html>
+
