@@ -44,12 +44,12 @@
 .info-btn { margin-right: 8px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .info-btn:hover { border-color: var(--text-main); color: var(--text-main); }
 
-/* ★ アカウント情報テーブルのスタイル強化 */
+/* アカウント情報テーブル */
 .info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .info-table th { 
     text-align: left; 
     color: var(--text-dim); 
-    padding: 12px 0; /* 高さを広げる */
+    padding: 12px 0;
     font-weight: normal; 
     width: 35%; 
     border-bottom: 1px solid var(--border); 
@@ -57,7 +57,7 @@
 .info-table td { 
     text-align: right; 
     color: var(--text-main); 
-    padding: 12px 0; /* 高さを広げる */
+    padding: 12px 0;
     font-weight: bold; 
     border-bottom: 1px solid var(--border); 
     font-family: monospace, sans-serif;
@@ -70,6 +70,9 @@
 .currency-switch { display: flex; background: var(--bg-grid); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
 .curr-btn { padding: 6px 16px; font-size: 12px; font-weight: bold; border: none; background: transparent; color: var(--text-dim); cursor: pointer; transition: 0.2s; min-width: 60px; }
 .curr-btn.active { background: var(--accent-blue); color: white; }
+
+/* 著作権表示 */
+.copyright-text { text-align: center; font-size: 10px; color: var(--text-dim); margin-top: 20px; padding-bottom: 20px; opacity: 0.7; }
 </style>
 </head>
 <body>
@@ -164,6 +167,10 @@
             <span style="margin: 0 10px; color:var(--border);">|</span>
             USD/JPY: <span id="footerRate" style="color:var(--text-dim); font-weight:bold;">---.--</span>
         </footer>
+        
+        <div class="copyright-text">
+            © 2026 STIR-CRAZY.COM. All rights reserved.
+        </div>
     </div>
 </div>
 
@@ -264,7 +271,6 @@
         updateUI(); 
     }
 
-    // アカウント変更時の自動切替
     function handleAccountChange() {
         const select = document.getElementById('accountSelector');
         const accountId = select.value;
@@ -307,7 +313,7 @@
                 } else {
                     let decimals = 0; 
                     if (fromCurrency === 'USD') decimals = 2;
-                    else if (fromCurrency === 'USC') decimals = 2; // 統計用:2桁
+                    else if (fromCurrency === 'USC') decimals = 2; 
                     return { val: amount, unit: fromCurrency, decimals: decimals };
                 }
             }
@@ -416,7 +422,6 @@
                 const res = getDisplayValue(rawVal, nativeCurr, false);
                 cellDisplayVal = res.val;
                 
-                // カレンダー: USD=2桁、それ以外0桁
                 if (res.unit === 'USD') cellDecimals = 2;
                 else cellDecimals = 0; 
 
@@ -571,18 +576,16 @@
         }
     }
 
-    // ★ パネル表示更新 (名前部分を修正)
+    // ★ パネル更新 (Last Update削除)
     function updateAccountInfoPanel(isIndividual, accountId) {
         const panel = document.getElementById('accountDetailsPanel');
         const content = document.getElementById('accountDetailsContent');
         if (!isIndividual || accountId === 'all') { panel.style.display = 'none'; return; }
         
         const s = accountSettings[accountId] || {};
-        const updateTime = document.getElementById('lastTime').textContent;
         const cSizeRaw = Number(s.contract_size);
         const cSize = isNaN(cSizeRaw) || cSizeRaw === 0 ? '-' : cSizeRaw.toLocaleString();
         
-        // 名前表示ロジック: 名前があり、かつIDと異なれば () に表示
         let idDisplay = `<span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span>`;
         if (s.name && s.name !== accountId) {
             idDisplay += ` <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal;">(${s.name})</span>`;
@@ -597,7 +600,6 @@
                 <tr><th>Currency</th><td>${s.currency}</td></tr>
                 <tr><th>Leverage</th><td>1 : ${s.leverage}</td></tr>
                 <tr><th>Contract Size</th><td>${cSize}</td></tr>
-                <tr><th>Last Update</th><td>${updateTime}</td></tr>
             </table>
         `;
         panel.style.display = 'block';
