@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="theme.css">
 <style>
-/* 既存スタイル */
+/* --- 既存スタイル --- */
 .padded-section, .stats-container, .details-container, .global-footer { width: 100%; margin: 0 auto 20px; }
 .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .grid { display: grid; grid-template-columns: repeat(7, 1fr); width: 100%; gap: 0 !important; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); box-sizing: border-box; }
@@ -41,15 +41,19 @@
 .detail-info { flex: 1; }
 .detail-name { font-weight: bold; font-size: 13px; color: var(--text-main); }
 .detail-val { font-family: monospace; font-weight: bold; margin-top: 2px; }
-
-/* 情報ボタンとテーブルのスタイル */
 .info-btn { margin-right: 8px; background: var(--bg-grid); border: 1px solid var(--border); color: var(--text-dim); border-radius: 4px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .info-btn:hover { border-color: var(--text-main); color: var(--text-main); }
-
 .info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
 .info-table th { text-align: left; color: var(--text-dim); padding: 10px 0; font-weight: normal; width: 40%; border-bottom: 1px solid var(--border); }
 .info-table td { text-align: right; color: var(--text-main); padding: 10px 0; font-weight: bold; border-bottom: 1px solid var(--border); }
 .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+
+/* ★ 新規: 通貨スイッチ & レート表示のスタイル */
+.currency-control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.rate-display { font-size: 11px; color: var(--text-dim); background: var(--bg-grid); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); }
+.currency-switch { display: flex; background: var(--bg-grid); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.curr-btn { padding: 6px 12px; font-size: 11px; font-weight: bold; border: none; background: transparent; color: var(--text-dim); cursor: pointer; transition: 0.2s; }
+.curr-btn.active { background: var(--accent-blue); color: white; }
 </style>
 </head>
 <body>
@@ -60,12 +64,17 @@
             <a href="#" class="logo"><span class="c-stir">STIR</span>&nbsp;<span class="c-tracker">TRACKER</span></a>
         </div>
     </header>
-<div class="type-switch-container card-style">
-    <button class="type-btn active" id="btnReal" onclick="switchType('Real')">REAL</button>
-    <button class="type-btn" id="btnDemo" onclick="switchType('Demo')">DEMO</button>
-    <button class="type-btn" id="btnCurrency" onclick="toggleBaseCurrency()" style="margin-left:10px; border-left:1px solid var(--border);">To USD</button>
-</div>
+
     <div class="padded-section" style="padding-top:20px;">
+        
+        <div class="currency-control-row">
+            <div class="currency-switch">
+                <button class="curr-btn active" id="currBtnJPY" onclick="setCurrency('JPY')">JPY</button>
+                <button class="curr-btn" id="currBtnUSD" onclick="setCurrency('USD')">USD</button>
+            </div>
+            <div class="rate-display" id="rateDisplay">Rate: Loading...</div>
+        </div>
+
         <div class="type-switch-container card-style">
             <button class="type-btn active" id="btnReal" onclick="switchType('Real')">REAL ACCOUNT</button>
             <button class="type-btn" id="btnDemo" onclick="switchType('Demo')">DEMO ACCOUNT</button>
@@ -106,7 +115,7 @@
         <div class="stats-container">
             <div class="stat-panel card-style">
                 <span style="font-size:9px; color:var(--text-dim);">MONTHLY PROFIT</span>
-                <div><span class="main-val" id="totalProfit">+0</span><span style="font-size:10px; color:var(--text-dim);"> JPY</span></div>
+                <div><span class="main-val" id="totalProfit">+0</span><span style="font-size:10px; color:var(--text-dim);" id="monthlyProfitUnit">JPY</span></div>
             </div>
             <div class="stat-panel card-style">
                 <span style="font-size:9px; color:var(--text-dim);">MONTHLY GAIN</span>
@@ -156,8 +165,7 @@
             <span style="font-weight:bold;">Account Information</span>
             <button onclick="closeAccountInfo()" style="background:none; border:none; color:var(--text-dim); font-size:20px;">✕</button>
         </div>
-        <div id="infoModalContent">
-            </div>
+        <div id="infoModalContent"></div>
     </div>
 </div>
 
@@ -192,7 +200,7 @@
     // ★★★ WorkersのURL ★★★
     const BASE_URL = "https://my-profit-app.stir-crazy-tracker.workers.dev";
 
-    // アイコン定義
+    // アイコン
     const ICON_EYE_OPEN = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
     const ICON_EYE_SLASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.83 9L15 12.17V12a3 3 0 00-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L2.1 19l1.41 1.41L20.59 3.41 19.17 2l-3.66 3.66C14.44 5.23 13.26 5 12 5 7 5 2.73 8.11 1 12.5c1.24 3.15 3.73 5.61 6.86 6.55.51.15 1.01.24 1.52.24.84 0 1.65-.24 2.37-.62l.1.1.26.26-.01-.03zM12 7c.27 0 .52.04.77.09L10.1 9.76c.04-.25.09-.5.09-.76 0-1.66 1.34-3 3-3z"/></svg>`;
     const ICON_TRASH = `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
@@ -209,83 +217,58 @@
     let initialModalValue = 0;
 
     // ★ 通貨設定
-    let displayCurrency = 'JPY'; // 現在の表示通貨 ('JPY' or 'USD')
-    let exchangeRates = {
-        "JPY": 1,
-        "USD": 150, // 初期値（API取得失敗時用）
-        "USC": 1.5, // USD / 100
-        "EUR": 160
-    };
+    let displayCurrency = 'JPY'; 
+    let exchangeRates = { "JPY": 1, "USD": 150, "USC": 1.5, "EUR": 160 };
 
     window.onload = async () => {
         const savedTheme = localStorage.getItem('selected_theme');
         if (savedTheme) document.body.className = savedTheme;
-        
-        // 1. レート取得
         await fetchExchangeRates();
-        // 2. データ取得
         await fetchAllData();
     };
 
-    // ★ APIから最新レートを取得する関数
+    // ★ APIから最新レート取得
     async function fetchExchangeRates() {
         try {
-            // 無料API (Frankfurter) を使用して USD -> JPY を取得
             const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=JPY');
             const data = await res.json();
             if (data && data.rates && data.rates.JPY) {
                 const usdJpy = data.rates.JPY;
                 exchangeRates["USD"] = usdJpy;
-                exchangeRates["USC"] = usdJpy / 100; // セントは1/100
-                console.log("Updated Rates:", exchangeRates);
-                
-                // ボタンのテキスト更新（レートを表示）
-                updateCurrencyButtonText();
+                exchangeRates["USC"] = usdJpy / 100; 
+                document.getElementById('rateDisplay').textContent = `Rate: ${usdJpy} JPY/USD`;
+            } else {
+                document.getElementById('rateDisplay').textContent = `Rate: ${exchangeRates.USD} (Fixed)`;
             }
         } catch (e) {
-            console.error("Rate fetch failed, using default.", e);
+            document.getElementById('rateDisplay').textContent = `Rate: ${exchangeRates.USD} (Offline)`;
         }
     }
 
-    function toggleBaseCurrency() {
-        if (displayCurrency === 'JPY') {
-            displayCurrency = 'USD';
-        } else {
-            displayCurrency = 'JPY';
-        }
-        updateCurrencyButtonText();
-        updateUI(); // 全画面再計算
-    }
-
-    function updateCurrencyButtonText() {
-        const btn = document.getElementById('btnCurrency');
-        if (displayCurrency === 'JPY') {
-            btn.textContent = `Show in USD (Rate: ${exchangeRates.USD})`;
-            btn.classList.remove('active');
-        } else {
-            btn.textContent = `Show in JPY`;
-            btn.classList.add('active');
-        }
+    // ★ 通貨切り替え（UI用）
+    function setCurrency(curr) {
+        displayCurrency = curr;
+        document.getElementById('currBtnJPY').classList.toggle('active', curr === 'JPY');
+        document.getElementById('currBtnUSD').classList.toggle('active', curr === 'USD');
+        updateUI(); 
     }
 
     // ★ 汎用 通貨換算関数
     function convertToDisplay(amount, fromCurrency) {
-        // 1. まずJPYにする（基準）
         let amountInJPY = 0;
-        const rateToJPY = exchangeRates[fromCurrency] || 1; // 未登録ならJPY扱い
+        const rateToJPY = exchangeRates[fromCurrency] || 1;
         
-        // USC(セント)などの特殊対応
+        // USC対応
         if (fromCurrency === "USC") {
             amountInJPY = amount * exchangeRates["USC"];
         } else {
             amountInJPY = amount * rateToJPY;
         }
 
-        // 2. 表示したい通貨に変換
+        // 表示通貨へ変換
         if (displayCurrency === 'JPY') {
-            return Math.floor(amountInJPY); // 円は整数
+            return Math.floor(amountInJPY);
         } else {
-            // USDに変換 (JPY / USDレート)
             return parseFloat((amountInJPY / exchangeRates["USD"]).toFixed(2));
         }
     }
@@ -351,56 +334,72 @@
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         for (let i = 0; i < firstDay; i++) grid.appendChild(createCell(i, 0, true));
 
-        let monthlyTotalDisplay = 0; // 表示通貨での合計
+        let monthlyTotalDisplay = 0; // 表示用合計（換算後）
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${currentYear}.${String(currentMonth + 1).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
-            let dailyTotalDisplay = 0;
-            let dailyRaw = 0; // 編集用の生データ(個別時のみ有効)
+            
+            // カレンダーセルに表示する値
+            let displayVal = 0;
+            // 編集用に渡す生の値（個別時のみ）
+            let rawVal = 0;
+            // 生の通貨単位（個別時のみ）
+            let nativeCurrency = 'JPY'; 
 
             if (isIndividual) {
+                // ★ 個別の時は、そのままの通貨で表示（Native）
                 const s = accountSettings[selectedId] || {};
-                dailyRaw = getDailyProfit(selectedId, dateStr);
-                // 個別でも指定通貨に変換して表示
-                dailyTotalDisplay = convertToDisplay(dailyRaw, s.currency || "JPY");
+                rawVal = getDailyProfit(selectedId, dateStr);
+                displayVal = rawVal; 
+                nativeCurrency = s.currency || "JPY";
             } else {
+                // ★ ALLの時は、選択した通貨に換算して合算
                 allAccountIds.forEach(id => {
                     const s = accountSettings[id] || {};
                     const isDemoAccount = (s.trade_mode === 'Demo');
                     const isTargetDemo = (currentType === 'Demo');
                     if (!s.isHidden && isDemoAccount === isTargetDemo) { 
-                        const raw = getDailyProfit(id, dateStr);
-                        // 合算ロジック: 一旦全てJPYにして足すのではなく、ターゲット通貨にして足す
-                        dailyTotalDisplay += convertToDisplay(raw, s.currency || "JPY");
+                        const r = getDailyProfit(id, dateStr);
+                        displayVal += convertToDisplay(r, s.currency || "JPY");
                     }
                 });
             }
-            monthlyTotalDisplay += dailyTotalDisplay;
+
+            // 合計計算用（ALLの場合はdisplayValそのもの、個別の場合は換算して足す）
+            if (isIndividual) {
+                const s = accountSettings[selectedId] || {};
+                monthlyTotalDisplay += convertToDisplay(rawVal, s.currency || "JPY");
+            } else {
+                monthlyTotalDisplay += displayVal;
+            }
             
-            // セル生成（編集用には raw を渡すが、ALLの時は raw は意味をなさないので0）
-            grid.appendChild(createCell(d, dailyTotalDisplay, false, true, dateStr, dailyRaw, isIndividual ? selectedId : 'all'));
+            grid.appendChild(createCell(d, displayVal, false, true, dateStr, rawVal, isIndividual ? selectedId : 'all', nativeCurrency));
         }
         
-        // 合計表示（通貨単位をつける）
-        const unit = displayCurrency;
+        // 統計エリアは常に「換算後」で表示して資産価値を示す
         const sign = monthlyTotalDisplay > 0 ? "+" : "";
-        // 0なら符号なし
-        const displayVal = monthlyTotalDisplay === 0 ? "0" : sign + monthlyTotalDisplay.toLocaleString();
-        
-        document.getElementById('totalProfit').innerHTML = `${displayVal} <span style="font-size:0.8em">${unit}</span>`;
+        const finalVal = monthlyTotalDisplay === 0 ? "0" : sign + monthlyTotalDisplay.toLocaleString();
+        document.getElementById('totalProfit').textContent = finalVal;
+        document.getElementById('monthlyProfitUnit').textContent = displayCurrency;
         
         updateStats();
     }
 
-    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', rawVal=0, viewMode='all') {
+    function createCell(day, amount, isEmpty=false, isEditable=false, dateStr='', rawVal=0, viewMode='all', currency='JPY') {
         const div = document.createElement('div');
         div.className = 'cell';
         if(isEmpty) { div.style.background='transparent'; return div; }
         
         div.innerHTML = `<div class="cell-date">${day}</div>`;
         if (amount !== 0) { 
-            // 小数点対応（USDなら小数を出す）
-            const valStr = amount.toLocaleString(undefined, { minimumFractionDigits: displayCurrency === 'JPY' ? 0 : 2, maximumFractionDigits: 2 });
+            // 小数点調整: USD表示 または 通貨がUSD/USCなら2桁
+            let decimals = 0;
+            if (viewMode === 'all') {
+                decimals = (displayCurrency === 'USD') ? 2 : 0;
+            } else {
+                decimals = (currency === 'USD' || currency === 'USC') ? 2 : 0;
+            }
+            const valStr = amount.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
             div.innerHTML += `<div class="cell-value" style="color:${amount >= 0 ? '#28a745' : '#dc3545'}">${valStr}</div>`; 
         }
         
@@ -409,19 +408,18 @@
             if (viewMode === 'all') {
                 div.onclick = () => openDailyDetails(dateStr);
             } else {
-                // 個別モードなら、rawVal（元の通貨の数字）を編集画面に渡す
-                div.onclick = () => openEditProfit(dateStr, rawVal, viewMode);
+                div.onclick = () => openEditProfit(dateStr, rawVal, viewMode, currency);
             }
         }
         return div;
     }
 
-    // 統計更新
+    // 統計更新 (資産価値として換算して表示)
     function updateStats() {
         let totalBalDisplay = 0;
         let totalProfitAllDisplay = 0;
         let totalMonthlyProfitDisplay = 0;
-        let totalDepositAllDisplay = 0; // %計算用（常に円換算で計算したほうが精度が良いが、ここでは表示通貨で合わせる）
+        let totalDepositAllDisplay = 0; 
         
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const selectedId = document.getElementById('accountSelector').value || 'all';
@@ -438,13 +436,12 @@
             const currency = s.currency || "JPY";
 
             if ((!s.isHidden || selectedId !== 'all') && isDemoAccount === isTargetDemo) {
-                // 全期間利益・残高
+                // すべて換算して足し上げる
                 if(accountsData[id]) {
                     const rawProfitAll = accountsData[id].history.reduce((sum, h) => sum + h.profit, 0);
                     totalProfitAllDisplay += convertToDisplay(rawProfitAll, currency);
                     totalBalDisplay += convertToDisplay(accountsData[id].balance || 0, currency);
                 }
-                // 入金総額
                 totalDepositAllDisplay += convertToDisplay(s.total_deposit || 0, currency);
 
                 // 月間利益
@@ -460,7 +457,7 @@
                 if (breakdownList && selectedId === 'all') {
                     const row = document.createElement('div');
                     row.className = 'bd-row';
-                    // 内訳も設定された通貨で表示
+                    // ALL表示時の内訳は換算後で表示（統一感のため）
                     row.innerHTML = `
                         <span class="bd-name">${s.name || id}</span>
                         <span class="bd-val">${monthDisplay.toLocaleString()} ${displayCurrency}</span>
@@ -473,29 +470,30 @@
 
         document.getElementById('monthlyBreakdownContainer').style.display = (hasData && selectedId === 'all') ? 'block' : 'none';
         
-        // 画面表示更新
+        // 統計表示
         const unit = displayCurrency;
         const fmt = (num) => num.toLocaleString(undefined, { minimumFractionDigits: unit==='JPY'?0:2, maximumFractionDigits:2 });
         
         document.getElementById('totalBalance').textContent = fmt(totalBalDisplay);
-        
         const allTimeSign = totalProfitAllDisplay > 0 ? "+" : "";
         document.getElementById('totalProfitAllTime').innerHTML = (totalProfitAllDisplay===0 ? "0" : allTimeSign + fmt(totalProfitAllDisplay));
 
-        // %計算（分母が0なら表示しない）
+        // %計算
         const gainEl = document.getElementById('totalGainPct');
         const monthlyGainEl = document.getElementById('monthlyGain');
 
         if (totalDepositAllDisplay > 0) {
             const gain = (totalProfitAllDisplay / totalDepositAllDisplay) * 100;
             const gainStr = gain.toFixed(2);
-            gainEl.textContent = (gain > 0 ? "+" : "") + gainStr + " %";
+            if(gainStr === "0.00" || gainStr === "-0.00") gainEl.textContent = "0.00 %";
+            else gainEl.textContent = (gain > 0 ? "+" : "") + gainStr + " %";
 
             const mStart = totalBalDisplay - totalMonthlyProfitDisplay;
             if (mStart > 0) {
                 const mGain = (totalMonthlyProfitDisplay / mStart) * 100;
                 const mGainStr = mGain.toFixed(2);
-                monthlyGainEl.textContent = (mGain > 0 ? "+" : "") + mGainStr + " %";
+                if(mGainStr === "0.00" || mGainStr === "-0.00") monthlyGainEl.textContent = "0.00 %";
+                else monthlyGainEl.textContent = (mGain > 0 ? "+" : "") + mGainStr + " %";
             } else { monthlyGainEl.textContent = "-- %"; }
         } else {
             gainEl.textContent = "-- %";
@@ -517,18 +515,20 @@
 
             if (!s.isHidden && isDemoAccount === isTargetDemo) {
                 const rawProfit = getDailyProfit(id, dateStr);
-                // 内訳リストも「現在選択中の通貨」に換算して表示
-                const displayVal = convertToDisplay(rawProfit, currency);
-                const color = displayVal >= 0 ? '#28a745' : '#dc3545';
+                // 内訳リストは「その口座のネイティブ通貨」で表示する（わかりやすさ重視）
+                const color = rawProfit >= 0 ? '#28a745' : '#dc3545';
                 
+                // 小数点調整
+                let decimals = (currency === 'USD' || currency === 'USC') ? 2 : 0;
+                const valStr = rawProfit.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: 2 });
+
                 const div = document.createElement('div');
                 div.className = 'detail-row';
-                
                 div.innerHTML = `
                     <div class="detail-info">
                         <div class="detail-name">${s.name || id}</div>
                         <div class="detail-val" style="color:${color}">
-                            ${displayVal > 0 ? '+' : ''}${displayVal.toLocaleString()} <span style="font-size:10px;">${displayCurrency}</span>
+                            ${rawProfit > 0 ? '+' : ''}${valStr} <span style="font-size:10px;">${currency}</span>
                         </div>
                     </div>
                     <button class="icon-btn" onclick="openEditProfit('${dateStr}', ${rawProfit}, '${id}', '${currency}')" title="Edit">
@@ -541,11 +541,10 @@
         document.getElementById('dailyDetailsModal').style.display = 'flex';
     }
 
-    // 編集モーダルを開く
     function openEditProfit(dateStr, currentVal, accountId, currency='JPY') {
         editingDate = dateStr;
         editingAccountId = accountId;
-        initialModalValue = currentVal; // ★ここ重要：編集は常に「元の通貨」で行う
+        initialModalValue = currentVal; 
         
         const accountName = accountSettings[accountId]?.name || accountId;
         const s = accountSettings[accountId] || {};
@@ -554,13 +553,11 @@
         document.getElementById('editDateLabel').textContent = `Date: ${dateStr} (${accountName})`;
         const input = document.getElementById('editProfitInput');
         input.value = currentVal;
-        // 入力は常に「その口座の通貨」で行うことを明示
-        input.placeholder = `Enter amount in ${nativeCurrency}`;
+        input.placeholder = `Amount in ${nativeCurrency}`;
         
         document.getElementById('editProfitModal').style.display = 'flex';
     }
 
-    // アカウント情報（前のコードを維持）
     function openAccountInfo() {
         const select = document.getElementById('accountSelector');
         const accountId = select.value;
@@ -573,7 +570,6 @@
             const s = accountSettings[accountId] || {};
             const updateTime = document.getElementById('lastTime').textContent;
             const cSize = s.contract_size ? Number(s.contract_size).toLocaleString() : '-';
-
             content.innerHTML = `
                 <table class="info-table">
                     <tr><th>ID</th><td><span style="font-size:1.1em; color:var(--accent-blue);">${accountId}</span> <span style="font-size:0.9em; color:var(--text-dim); font-weight:normal; margin-left:5px;">(${s.name})</span></td></tr>
@@ -590,7 +586,6 @@
         modal.style.display = 'flex';
     }
 
-    // --- その他、既存関数 ---
     function updateDropdown() {
         const select = document.getElementById('accountSelector');
         if (!select) return;
@@ -613,7 +608,7 @@
     function closeDailyDetails() { document.getElementById('dailyDetailsModal').style.display = 'none'; }
     function closeEditProfit() { document.getElementById('editProfitModal').style.display = 'none'; editingDate = null; editingAccountId = null; }
     function revertInput() { document.getElementById('editProfitInput').value = initialModalValue; }
-    
+    function closeAccountInfo() { document.getElementById('accountInfoModal').style.display = 'none'; }
     async function saveProfitEdit() {
         const newVal = document.getElementById('editProfitInput').value;
         if (!editingDate || !editingAccountId) return;
@@ -632,11 +627,10 @@
         if (!accountsData[id]) return 0;
         return accountsData[id].history.filter(h => h.close_time.startsWith(dateStr)).reduce((sum, h) => sum + h.profit, 0);
     }
-    function openSettings() { /* 省略（変更なし） */ const modal = document.getElementById('settingsModal'); const container = document.getElementById('idListContainer'); container.innerHTML = ''; allAccountIds.forEach(id => { const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' }; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if (isDemoAccount === isTargetDemo) { const div = document.createElement('div'); div.className = 'setting-row'; const eyeIcon = s.isHidden ? ICON_EYE_SLASH : ICON_EYE_OPEN; const eyeClass = s.isHidden ? '' : 'active'; const eyeOpacity = s.isHidden ? '0.5' : '1'; div.innerHTML = `<div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">${id}</div><div class="setting-controls"><input type="text" class="setting-input" id="name-${id}" value="${s.name}" placeholder="Account Name"><button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')">${eyeIcon}</button><button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')">${ICON_TRASH}</button></div><input type="hidden" id="hide-val-${id}" value="${s.isHidden ? '1' : '0'}">`; container.appendChild(div); } }); modal.style.display = 'flex'; }
+    function openSettings() { const modal = document.getElementById('settingsModal'); const container = document.getElementById('idListContainer'); container.innerHTML = ''; allAccountIds.forEach(id => { const s = accountSettings[id] || { name: '', isHidden: false, trade_mode: 'Real' }; const isDemoAccount = (s.trade_mode === 'Demo'); const isTargetDemo = (currentType === 'Demo'); if (isDemoAccount === isTargetDemo) { const div = document.createElement('div'); div.className = 'setting-row'; const eyeIcon = s.isHidden ? ICON_EYE_SLASH : ICON_EYE_OPEN; const eyeClass = s.isHidden ? '' : 'active'; const eyeOpacity = s.isHidden ? '0.5' : '1'; div.innerHTML = `<div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">${id}</div><div class="setting-controls"><input type="text" class="setting-input" id="name-${id}" value="${s.name}" placeholder="Account Name"><button type="button" class="icon-btn ${eyeClass}" style="opacity:${eyeOpacity}" onclick="toggleHide(this, '${id}')">${eyeIcon}</button><button type="button" class="icon-btn delete" onclick="deleteAccount('${id}')">${ICON_TRASH}</button></div><input type="hidden" id="hide-val-${id}" value="${s.isHidden ? '1' : '0'}">`; container.appendChild(div); } }); modal.style.display = 'flex'; }
     function toggleHide(btn, id) { const inputVal = document.getElementById(`hide-val-${id}`); const isHidden = inputVal.value === '1'; if (isHidden) { inputVal.value = '0'; btn.innerHTML = ICON_EYE_OPEN; btn.classList.add('active'); btn.style.opacity = '1'; } else { inputVal.value = '1'; btn.innerHTML = ICON_EYE_SLASH; btn.classList.remove('active'); btn.style.opacity = '0.5'; } }
     async function deleteAccount(id) { if (!confirm(`Delete ${id}?`)) return; try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delete_account: id }) }); allAccountIds = allAccountIds.filter(aid => aid !== id); openSettings(); updateDropdown(); updateUI(); } catch(e) { alert("Error"); } }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-    function closeAccountInfo() { document.getElementById('accountInfoModal').style.display = 'none'; }
     function changeTheme(theme) { document.body.className = theme; localStorage.setItem('selected_theme', theme); }
     async function saveAndClose() { allAccountIds.forEach(id => { const nameInput = document.getElementById(`name-${id}`); const hideVal = document.getElementById(`hide-val-${id}`); if (nameInput && hideVal) { if (!accountSettings[id]) accountSettings[id] = {}; accountSettings[id].name = nameInput.value; accountSettings[id].isHidden = (hideVal.value === '1'); } }); try { await fetch(BASE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: accountSettings }) }); updateDropdown(); updateUI(); closeSettings(); } catch(e) { alert("Error"); } }
     function switchType(type) { currentType = type; document.getElementById('btnReal').classList.toggle('active', type === 'Real'); document.getElementById('btnDemo').classList.toggle('active', type === 'Demo'); updateDropdown(); updateUI(); }
@@ -644,5 +638,3 @@
 </script>
 </body>
 </html>
-
-
